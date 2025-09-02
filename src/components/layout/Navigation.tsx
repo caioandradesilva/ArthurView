@@ -31,9 +31,11 @@ const Navigation: React.FC = () => {
       <div className="lg:hidden">
         <div className="flex items-center justify-between bg-dark-900 px-4 py-3">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-              <span className="text-dark-900 font-bold text-sm">AV</span>
-            </div>
+            <img 
+              src="/Arthur-2-18-1.png" 
+              alt="Arthur View" 
+              className="w-8 h-8"
+            />
             <h1 className="text-white font-semibold">Arthur View</h1>
           </div>
           <button
@@ -49,9 +51,11 @@ const Navigation: React.FC = () => {
           <div className="fixed inset-0 z-50 bg-dark-900">
             <div className="flex items-center justify-between px-4 py-3 border-b border-dark-700">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
-                  <span className="text-dark-900 font-bold text-sm">AV</span>
-                </div>
+                <img 
+                  src="/Arthur-2-18-1.png" 
+                  alt="Arthur View" 
+                  className="w-8 h-8"
+                />
                 <h1 className="text-white font-semibold">Arthur View</h1>
               </div>
               <button
@@ -110,9 +114,11 @@ const Navigation: React.FC = () => {
       <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-grow bg-dark-900">
           <div className="flex items-center px-6 py-6">
-            <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
-              <span className="text-dark-900 font-bold">AV</span>
-            </div>
+            <img 
+              src="/Arthur-2-18-1.png" 
+              alt="Arthur View" 
+              className="w-10 h-10"
+            />
             <h1 className="ml-3 text-xl font-semibold text-white">Arthur View</h1>
           </div>
 

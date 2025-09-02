@@ -28,9 +28,11 @@ const LoginForm: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-dark-900 to-dark-800 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-primary-500 rounded-xl flex items-center justify-center">
-            <Server className="h-8 w-8 text-dark-900" />
-          </div>
+          <img 
+            src="/Arthur-2-18-1.png" 
+            alt="Arthur View" 
+            className="mx-auto h-16 w-16"
+          />
           <h2 className="mt-6 text-3xl font-extrabold text-white">Arthur View</h2>
           <p className="mt-2 text-sm text-gray-300">
             Bitcoin Mining Asset Management Platform
