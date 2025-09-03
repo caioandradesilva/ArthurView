@@ -7,9 +7,10 @@ import type { CostRecord } from '../../types';
 interface TicketCostsProps {
   costs: CostRecord[];
   ticketId: string;
+  siteId?: string;
 }
 
-const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
+const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'default-site' }) => {
   const { userProfile } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,22 +20,53 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
     category: 'parts' as 'parts' | 'labor' | 'other'
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userProfile) return;
+  const handleAddCost = async () => {
+    console.log('handleAddCost called with:', { formData, ticketId, siteId, userProfile });
+    
+    if (!userProfile || !formData.description.trim() || formData.amount <= 0) {
+      console.error('No user profile found');
+      console.error('Validation failed:', { description: formData.description, amount: formData.amount });
+      setError('Please fill in all required fields');
+      return;
+    }
 
     setLoading(true);
+    setError('');
+    
     try {
-      // Note: You'll need to modify the cost record creation to include ticketId
-      // This is a simplified implementation
-      console.log('Adding cost to ticket:', { ...formData, ticketId });
+      console.log('Creating cost record...');
+      
+      // Create cost record without asicId for ticket-only costs
+      const costData = {
+        description: formData.description.trim(),
+        amount: formData.amount,
+        currency: formData.currency,
+        category: formData.category,
+        ticketId: ticketId,
+        siteId: siteId,
+        createdBy: userProfile.name,
+        isEstimate: true,
+        isVisible: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      console.log('Cost data to be saved:', costData);
+      await FirestoreService.createCostRecord(costData);
+      
+      console.log('Cost record created successfully');
+      
+      // Reset form
       setFormData({ description: '', amount: 0, currency: 'USD', category: 'parts' });
       setShowAddForm(false);
-      // Refresh would happen in parent component
+      
+      // Refresh the page data instead of full reload
       window.location.reload();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding cost record:', error);
+      setError(`Failed to add cost: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -59,8 +91,9 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
             <p className="text-sm text-gray-600">{costs.length} cost entries</p>
           </div>
           <button
+            type="button"
             onClick={() => setShowAddForm(!showAddForm)}
-           className="flex items-center space-x-2 px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Plus className="h-4 w-4" />
             <span>Add Cost</span>
@@ -70,8 +103,14 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
 
       {/* Add cost form */}
       {showAddForm && (
-        <form onSubmit={handleSubmit} className="border border-gray-200 rounded-lg p-4">
+        <div className="border border-gray-200 rounded-lg p-4">
           <h4 className="text-lg font-medium text-gray-900 mb-4">Add Cost Entry</h4>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
@@ -136,20 +175,24 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                setShowAddForm(false);
+                setError('');
+              }}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleAddCost}
               disabled={loading}
               className="px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Adding...' : 'Add Cost'}
             </button>
           </div>
-        </form>
+        </div>
       )}
 
       {/* Costs list */}
@@ -170,7 +213,7 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
                     <span className="capitalize">{cost.category}</span>
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-3 w-3" />
-                      <span>{new Date(cost.createdAt).toLocaleDateString()}</span>
+                      <span>{new Date(cost.createdAt).toLocaleDateString('en-US')}</span>
                     </div>
                     <span>Added by {cost.createdBy}</span>
                   </div>

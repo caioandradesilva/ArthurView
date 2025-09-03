@@ -86,6 +86,7 @@ export class FirestoreService {
     const querySnapshot = await getDocs(q);
     return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ASIC;
   }
+  
   static async createASIC(asic: Omit<ASIC, 'id'>): Promise<string> {
     const docRef = await addDoc(collection(db, 'asics'), {
       ...asic,
@@ -266,20 +267,60 @@ export class FirestoreService {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
   }
 
+  static async getCostsByTicket(ticketId: string): Promise<CostRecord[]> {
+    const q = query(collection(db, 'costs'), where('ticketId', '==', ticketId), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
+  }
+
   static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
+    console.log('Creating cost record:', cost);
+    
+    // Clean the cost data to remove any undefined or empty values
+    const cleanCost: any = {
+      description: cost.description,
+      amount: cost.amount,
+      currency: cost.currency,
+      category: cost.category,
+      siteId: cost.siteId,
+      createdBy: cost.createdBy,
+      isEstimate: cost.isEstimate,
+      isVisible: cost.isVisible
+    };
+    
+    // Only include optional fields if they have values
+    if (cost.ticketId) {
+      cleanCost.ticketId = cost.ticketId;
+    }
+    
+    if (cost.asicId && cost.asicId.trim() !== '') {
+      cleanCost.asicId = cost.asicId;
+    }
+    
+    console.log('Clean cost data for Firestore:', cleanCost);
+    
     const docRef = await addDoc(collection(db, 'costs'), {
-      ...cost,
-      createdAt: serverTimestamp()
+      ...cleanCost,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
     
+    console.log('Cost record created with ID:', docRef.id);
+    
     // Create audit event
-    await this.createAuditEvent({
-      asicId: cost.asicId,
-      eventType: 'cost_added',
-      description: `Cost added: ${cost.description} - ${cost.currency} ${cost.amount}`,
-      performedBy: cost.createdBy,
-      metadata: { costId: docRef.id, amount: cost.amount, category: cost.category }
-    });
+    // Only create audit event if there's an associated ASIC
+    if (cleanCost.asicId) {
+      console.log('Creating audit event for ASIC:', cleanCost.asicId);
+      await this.createAuditEvent({
+        asicId: cleanCost.asicId,
+        eventType: 'cost_added',
+        description: `Cost added: ${cost.description} - ${cost.currency} ${cost.amount}`,
+        performedBy: cost.createdBy,
+        metadata: { costId: docRef.id, amount: cost.amount, category: cost.category }
+      });
+    } else {
+      console.log('No ASIC associated, skipping audit event');
+    }
     
     return docRef.id;
   }
