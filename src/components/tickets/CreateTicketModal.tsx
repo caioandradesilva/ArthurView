@@ -65,11 +65,14 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       const sites = await FirestoreService.getSites();
       let foundAsic: ASIC | null = null;
       
-      for (const site of sites && !foundAsic) {
+      for (const site of sites) {
+        if (foundAsic) break;
         const containers = await FirestoreService.getContainersBySite(site.id);
-        for (const container of containers && !foundAsic) {
+        for (const container of containers) {
+          if (foundAsic) break;
           const racks = await FirestoreService.getRacksByContainer(container.id);
-          for (const rack of racks && !foundAsic) {
+          for (const rack of racks) {
+            if (foundAsic) break;
             const asics = await FirestoreService.getASICsByRack(rack.id);
             foundAsic = asics.find(a => a.id === preselectedAsicId) || null;
           }
