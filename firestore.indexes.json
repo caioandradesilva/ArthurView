@@ -28,6 +28,14 @@
       ]
     },
     {
+      "collectionGroup": "tickets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "asicId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "asics",
       "queryScope": "COLLECTION",
       "fields": [
