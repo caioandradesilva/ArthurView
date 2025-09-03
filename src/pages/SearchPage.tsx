@@ -104,12 +104,22 @@ const SearchPage: React.FC = () => {
                       <div className="flex items-center space-x-3 mb-2">
                         <Cpu className="h-5 w-5 text-gray-400" />
                         <h4 className="text-lg font-medium text-gray-900 truncate">
-                          {asic.serialNumber}
+                          {asic.macAddress || asic.serialNumber}
                         </h4>
                         <StatusBadge status={asic.status} size="sm" />
                       </div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
+                        <div>
+                          <span className="font-medium text-gray-900">MAC Address:</span>
+                          <br />
+                          {asic.macAddress || 'Not set'}
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-900">Serial Number:</span>
+                          <br />
+                          {asic.serialNumber}
+                        </div>
                         <div>
                           <span className="font-medium text-gray-900">Model:</span>
                           <br />
@@ -123,15 +133,14 @@ const SearchPage: React.FC = () => {
                             <span>{asic.location}</span>
                           </div>
                         </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600 mt-3">
                         <div>
-                          <span className="font-medium text-gray-900">IP Address:</span>
-                          <br />
-                          {asic.ipAddress}
+                          <span className="font-medium text-gray-900">IP Address:</span> {asic.ipAddress}
                         </div>
                         <div>
-                          <span className="font-medium text-gray-900">Hash Rate:</span>
-                          <br />
-                          {asic.hashRate} TH/s
+                          <span className="font-medium text-gray-900">Hash Rate:</span> {asic.hashRate} TH/s
                         </div>
                       </div>
                     </div>

@@ -141,7 +141,7 @@ const AssetHierarchy: React.FC = () => {
               {node.type === 'site' ? (node.data as Site).name :
                node.type === 'container' ? (node.data as Container).name :
                node.type === 'rack' ? (node.data as Rack).name :
-               (node.data as ASIC).serialNumber}
+               (node.data as ASIC).macAddress || (node.data as ASIC).serialNumber}
             </span>
             
             {node.type === 'asic' && (
@@ -156,9 +156,14 @@ const AssetHierarchy: React.FC = () => {
           )}
           
           {node.type === 'asic' && (
-            <span className="text-sm text-gray-500">
-              {(node.data as ASIC).hashRate} TH/s
-            </span>
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {(node.data as ASIC).serialNumber}
+              </div>
+              <div className="text-xs text-gray-500">
+                {(node.data as ASIC).hashRate} TH/s
+              </div>
+            </div>
           )}
         </div>
         

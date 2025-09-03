@@ -26,7 +26,7 @@ const ASICDetailsPage: React.FC = () => {
 
   const breadcrumbItems = [
     { label: 'Assets', href: '/assets' },
-    { label: asic?.serialNumber || 'Loading...' }
+    { label: asic?.macAddress || asic?.serialNumber || 'Loading...' }
   ];
 
   useEffect(() => {
@@ -107,11 +107,24 @@ const ASICDetailsPage: React.FC = () => {
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-4">
               <Cpu className="h-6 w-6 text-gray-500" />
-              <h1 className="text-2xl font-bold text-gray-900">{asic.serialNumber}</h1>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{asic.macAddress || asic.serialNumber}</h1>
+                {asic.macAddress && (
+                  <p className="text-sm text-gray-600">Serial: {asic.serialNumber}</p>
+                )}
+              </div>
               <StatusBadge status={asic.status} />
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
+              <div className="flex items-start space-x-2">
+                <Cpu className="h-4 w-4 text-gray-400 mt-0.5" />
+                <div>
+                  <span className="font-medium text-gray-900">MAC Address</span>
+                  <p className="text-gray-600 font-mono">{asic.macAddress || 'Not set'}</p>
+                </div>
+              </div>
+              
               <div className="flex items-start space-x-2">
                 <Cpu className="h-4 w-4 text-gray-400 mt-0.5" />
                 <div>

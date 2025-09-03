@@ -81,6 +81,11 @@ export class FirestoreService {
     return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ASIC;
   }
 
+  static async getASICByMAC(macAddress: string): Promise<ASIC | null> {
+    const q = query(collection(db, 'asics'), where('macAddress', '==', macAddress), limit(1));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ASIC;
+  }
   static async createASIC(asic: Omit<ASIC, 'id'>): Promise<string> {
     const docRef = await addDoc(collection(db, 'asics'), {
       ...asic,
@@ -239,6 +244,7 @@ export class FirestoreService {
   static async searchASICs(searchTerm: string): Promise<ASIC[]> {
     // This is a basic implementation. In production, you might want to use Algolia or similar
     const queries = [
+      query(collection(db, 'asics'), where('macAddress', '>=', searchTerm), where('macAddress', '<=', searchTerm + '\uf8ff')),
       query(collection(db, 'asics'), where('serialNumber', '>=', searchTerm), where('serialNumber', '<=', searchTerm + '\uf8ff')),
       query(collection(db, 'asics'), where('ipAddress', '>=', searchTerm), where('ipAddress', '<=', searchTerm + '\uf8ff')),
       query(collection(db, 'asics'), where('location', '>=', searchTerm), where('location', '<=', searchTerm + '\uf8ff'))

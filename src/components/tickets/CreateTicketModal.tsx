@@ -114,14 +114,14 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           {/* ASIC Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              ASIC * {selectedAsic && `(${selectedAsic.serialNumber})`}
+              ASIC * {selectedAsic && `(${selectedAsic.macAddress || selectedAsic.serialNumber})`}
             </label>
             {!preselectedAsicId && (
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by serial number, IP, or location..."
+                  placeholder="Search by MAC address, serial number, IP, or location..."
                   value={asicSearchTerm}
                   onChange={(e) => setAsicSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -135,8 +135,11 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                         onClick={() => handleAsicSelect(asic)}
                         className="w-full text-left p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                       >
-                        <div className="font-medium text-gray-900">{asic.serialNumber}</div>
-                        <div className="text-sm text-gray-600">{asic.location} - {asic.ipAddress}</div>
+                        <div className="font-medium text-gray-900">{asic.macAddress || asic.serialNumber}</div>
+                        <div className="text-sm text-gray-600">
+                          {asic.macAddress && <span>Serial: {asic.serialNumber} • </span>}
+                          {asic.location} • {asic.ipAddress}
+                        </div>
                       </button>
                     ))}
                   </div>
