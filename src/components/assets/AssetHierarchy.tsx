@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, MapPin, Package, Server, Cpu } from 'lucide-react';
+import { ChevronRight, ChevronDown, MapPin, Package, Server, Cpu, Edit } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { FirestoreService } from '../../lib/firestore';
 import type { Site, Container, Rack, ASIC } from '../../types';
 import StatusBadge from '../ui/StatusBadge';
+import EditSiteModal from './EditSiteModal';
+import EditContainerModal from './EditContainerModal';
+import EditRackModal from './EditRackModal';
 
 interface HierarchyData {
   sites: Site[];
@@ -21,6 +25,10 @@ const AssetHierarchy: React.FC = () => {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
+  const [editModal, setEditModal] = useState<{
+    type: 'site' | 'container' | 'rack' | null;
+    item: Site | Container | Rack | null;
+  }>({ type: null, item: null });
 
   useEffect(() => {
     loadSites();
@@ -143,10 +151,12 @@ const AssetHierarchy: React.FC = () => {
     return (
       <div key={site.id} className="mb-1">
         <div
-          className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-          onClick={() => toggleNode(site.id, 'site')}
+          className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors group"
         >
-          <div className="flex items-center space-x-2 flex-1 min-w-0">
+          <div 
+            className="flex items-center space-x-2 flex-1 min-w-0 cursor-pointer"
+            onClick={() => toggleNode(site.id, 'site')}
+          >
             <button className="p-0.5 hover:bg-gray-200 rounded">
               {isLoading ? (
                 <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -165,6 +175,16 @@ const AssetHierarchy: React.FC = () => {
               {site.name}
             </span>
           </div>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditModal({ type: 'site', item: site });
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+          >
+            <Edit className="h-3 w-3 text-gray-500" />
+          </button>
           
           <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
             {site.country}

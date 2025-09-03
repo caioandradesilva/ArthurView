@@ -440,3 +440,23 @@ export class FirestoreService {
     return results.slice(0, 20); // Limit to 20 results
   }
 }
+  static async updateSite(id: string, updates: Partial<Site>): Promise<void> {
+  static async updateRack(id: string, updates: Partial<Rack>): Promise<void> {
+    await updateDoc(doc(db, 'racks', id), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  }
+
+  static async updateContainer(id: string, updates: Partial<Container>): Promise<void> {
+    await updateDoc(doc(db, 'containers', id), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  }
+
+    await updateDoc(doc(db, 'sites', id), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  }
