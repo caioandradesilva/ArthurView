@@ -236,7 +236,7 @@ const TicketDetailsPage: React.FC = () => {
           )}
           
           {activeTab === 'costs' && (
-            <TicketCosts costs={costs} ticketId={ticket.id} />
+            <TicketCosts costs={costs} ticketId={ticket.id} siteId={ticket.siteId} />
           )}
         </div>
       </div>

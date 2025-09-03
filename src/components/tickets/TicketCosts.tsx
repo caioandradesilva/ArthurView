@@ -7,9 +7,10 @@ import type { CostRecord } from '../../types';
 interface TicketCostsProps {
   costs: CostRecord[];
   ticketId: string;
+  siteId?: string;
 }
 
-const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
+const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'default-site' }) => {
   const { userProfile } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -26,12 +27,22 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
 
     setLoading(true);
     try {
-      // Note: You'll need to modify the cost record creation to include ticketId
-      // This is a simplified implementation
-      console.log('Adding cost to ticket:', { ...formData, ticketId });
+      await FirestoreService.createCostRecord({
+        description: formData.description,
+        amount: formData.amount,
+        currency: formData.currency,
+        category: formData.category,
+        ticketId: ticketId,
+        asicId: '', // Empty string for ticket-only costs  
+        siteId: siteId,
+        createdBy: userProfile.name,
+        isEstimate: true,
+        isVisible: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
       setFormData({ description: '', amount: 0, currency: 'USD', category: 'parts' });
       setShowAddForm(false);
-      // Refresh would happen in parent component
       window.location.reload();
     } catch (error) {
       console.error('Error adding cost record:', error);

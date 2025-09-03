@@ -269,17 +269,21 @@ export class FirestoreService {
   static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
     const docRef = await addDoc(collection(db, 'costs'), {
       ...cost,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
     });
     
     // Create audit event
-    await this.createAuditEvent({
-      asicId: cost.asicId,
-      eventType: 'cost_added',
-      description: `Cost added: ${cost.description} - ${cost.currency} ${cost.amount}`,
-      performedBy: cost.createdBy,
-      metadata: { costId: docRef.id, amount: cost.amount, category: cost.category }
-    });
+    // Only create audit event if there's an associated ASIC
+    if (cost.asicId) {
+      await this.createAuditEvent({
+        asicId: cost.asicId,
+        eventType: 'cost_added',
+        description: `Cost added: ${cost.description} - ${cost.currency} ${cost.amount}`,
+        performedBy: cost.createdBy,
+        metadata: { costId: docRef.id, amount: cost.amount, category: cost.category }
+      });
+    }
     
     return docRef.id;
   }
