@@ -86,6 +86,7 @@ export class FirestoreService {
     const querySnapshot = await getDocs(q);
     return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ASIC;
   }
+  
   static async createASIC(asic: Omit<ASIC, 'id'>): Promise<string> {
     const docRef = await addDoc(collection(db, 'asics'), {
       ...asic,
@@ -267,9 +268,16 @@ export class FirestoreService {
   }
 
   static async getCostsByTicket(ticketId: string): Promise<CostRecord[]> {
-    const querySnapshot = await getDocs(q);
+    const q = query(collection(db, 'costs'), where('ticketId', '==', ticketId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
+  }
+
+  static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
+    console.log('Creating cost record:', cost);
+    
+    // Clean the cost data to remove any undefined or empty values
+    const cleanCost: any = {
       description: cost.description,
       amount: cost.amount,
       currency: cost.currency,
