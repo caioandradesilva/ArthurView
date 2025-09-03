@@ -23,6 +23,7 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!userProfile) return;
 
     setLoading(true);
@@ -33,7 +34,7 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
         currency: formData.currency,
         category: formData.category,
         ticketId: ticketId,
-        asicId: '', // Empty string for ticket-only costs  
+        asicId: '', // Empty string for ticket-only costs
         siteId: siteId,
         createdBy: userProfile.name,
         isEstimate: true,
@@ -43,9 +44,13 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
       });
       setFormData({ description: '', amount: 0, currency: 'USD', category: 'parts' });
       setShowAddForm(false);
-      window.location.reload();
+      // Instead of reloading, we should call a callback to refresh data
+      if (window.location.pathname.includes('/ticket/')) {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error adding cost record:', error);
+      alert('Error adding cost record. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -156,6 +161,11 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
               type="submit"
               disabled={loading}
               className="px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSubmit(e);
+              }}
             >
               {loading ? 'Adding...' : 'Add Cost'}
             </button>
