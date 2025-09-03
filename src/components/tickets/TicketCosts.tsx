@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, Plus, Calendar } from 'lucide-react';
+import { DollarSign, Plus, Calendar, Trash2 } from 'lucide-react';
 import { FirestoreService } from '../../lib/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import type { CostRecord } from '../../types';
@@ -19,6 +19,21 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
     category: 'parts' as 'parts' | 'labor' | 'other'
   });
   const [loading, setLoading] = useState(false);
+
+  const handleDelete = async (costId: string) => {
+    if (!confirm('Are you sure you want to delete this cost record?')) {
+      return;
+    }
+
+    try {
+      await FirestoreService.deleteCostRecord(costId);
+      // Trigger parent component refresh
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting cost record:', error);
+      alert('Error deleting cost record. Please try again.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,6 +217,13 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
                     {cost.category}
                   </div>
                 </div>
+                <button
+                  onClick={() => handleDelete(cost.id)}
+                  className="ml-3 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete cost record"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
           ))}

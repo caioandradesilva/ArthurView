@@ -302,6 +302,10 @@ export class FirestoreService {
     return docRef.id;
   }
 
+  static async deleteCostRecord(costId: string): Promise<void> {
+    await deleteDoc(doc(db, 'costs', costId));
+  }
+
   // Audit Events
   static async getAuditEventsByASIC(asicId: string): Promise<AuditEvent[]> {
     const q = query(collection(db, 'auditEvents'), where('asicId', '==', asicId), orderBy('createdAt', 'desc'));
