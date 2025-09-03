@@ -59,8 +59,8 @@ export interface Ticket {
   assignedTo: string[]; // Multiple operators can be assigned
   createdBy: string;
   createdBySiteId: string; // Site of the creator
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | any; // Allow Firestore timestamp
+  updatedAt: Date | any; // Allow Firestore timestamp
   resolvedAt?: Date;
   estimatedCost?: number; // Operator estimate
   actualCost?: number; // Admin confirmed cost

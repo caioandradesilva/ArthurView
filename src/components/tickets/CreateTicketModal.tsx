@@ -69,13 +69,30 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     setError('');
 
     try {
+      // Get the selected ASIC to determine the site
+      let siteId = '';
+      if (selectedAsic) {
+        siteId = selectedAsic.siteId;
+      } else if (preselectedAsicId) {
+        // If we have a preselected ASIC, we need to get its siteId
+        // For now, we'll use the first site the user has access to
+        siteId = userProfile.siteIds[0] || '';
+      }
+
       await FirestoreService.createTicket({
         title: formData.title,
         description: formData.description,
         priority: formData.priority,
         status: 'open',
         asicId: formData.asicId,
+        siteId: siteId,
         createdBy: userProfile.name,
+        createdBySiteId: siteId,
+        assignedTo: [],
+        estimatedCost: 0,
+        costCurrency: 'USD',
+        isUrgent: false,
+        clientVisible: userProfile.role === 'client' ? false : true,
         createdAt: new Date(),
         updatedAt: new Date()
       });

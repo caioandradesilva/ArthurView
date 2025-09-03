@@ -122,6 +122,32 @@ export class FirestoreService {
   }
 
   // Tickets
+  static async getAllTickets(): Promise<Ticket[]> {
+    const q = query(collection(db, 'tickets'), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+  }
+
+  static async getTicketsBySite(siteId: string): Promise<Ticket[]> {
+    const q = query(
+      collection(db, 'tickets'), 
+      where('siteId', '==', siteId), 
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+  }
+
+  static async getTicketsByUser(userId: string): Promise<Ticket[]> {
+    const q = query(
+      collection(db, 'tickets'), 
+      where('createdBy', '==', userId), 
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+  }
+
   static async getTicketsByASIC(asicId: string): Promise<Ticket[]> {
     const q = query(collection(db, 'tickets'), where('asicId', '==', asicId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);

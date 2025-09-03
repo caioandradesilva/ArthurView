@@ -4,9 +4,11 @@ import Breadcrumb from '../components/ui/Breadcrumb';
 import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
+import { useAuth } from '../contexts/AuthContext';
 import type { Ticket } from '../types';
 
 const TicketsPage: React.FC = () => {
+  const { userProfile } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +16,7 @@ const TicketsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [viewFilter, setViewFilter] = useState<string>('all'); // all, my-tickets
 
   const breadcrumbItems = [
     { label: 'Tickets' }
@@ -24,14 +27,31 @@ const TicketsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    filterTickets();
-  }, [tickets, searchTerm, statusFilter, priorityFilter]);
+    applyFilters();
+  }, [tickets, searchTerm, statusFilter, priorityFilter, viewFilter]);
 
   const loadTickets = async () => {
+    if (!userProfile) return;
+    
     try {
-      // Note: In a real implementation, you'd have a method to get all tickets
-      // For now, this will return empty array until we have data
-      setTickets([]);
+      let ticketsData: Ticket[] = [];
+      
+      if (userProfile.role === 'admin' && userProfile.canViewAllSites) {
+        // Admin can see all tickets
+        ticketsData = await FirestoreService.getAllTickets();
+      } else if (userProfile.siteIds.length > 0) {
+        // Load tickets from user's assigned sites
+        for (const siteId of userProfile.siteIds) {
+          const siteTickets = await FirestoreService.getTicketsBySite(siteId);
+          ticketsData = [...ticketsData, ...siteTickets];
+        }
+        // Remove duplicates and sort by creation date
+        ticketsData = ticketsData
+          .filter((ticket, index, self) => self.findIndex(t => t.id === ticket.id) === index)
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      }
+      
+      setTickets(ticketsData);
     } catch (error) {
       console.error('Error loading tickets:', error);
     } finally {
@@ -39,7 +59,7 @@ const TicketsPage: React.FC = () => {
     }
   };
 
-  const filterTickets = () => {
+  const applyFilters = () => {
     let filtered = tickets;
 
     // Search filter
@@ -59,6 +79,14 @@ const TicketsPage: React.FC = () => {
     // Priority filter
     if (priorityFilter !== 'all') {
       filtered = filtered.filter(ticket => ticket.priority === priorityFilter);
+    }
+
+    // View filter (my tickets vs all tickets)
+    if (viewFilter === 'my-tickets' && userProfile) {
+      filtered = filtered.filter(ticket => 
+        ticket.createdBy === userProfile.name || 
+        (ticket.assignedTo && ticket.assignedTo.includes(userProfile.name))
+      );
     }
 
     setFilteredTickets(filtered);
@@ -102,7 +130,7 @@ const TicketsPage: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -145,6 +173,18 @@ const TicketsPage: React.FC = () => {
             </select>
           </div>
 
+          {/* View Filter */}
+          <div>
+            <select
+              value={viewFilter}
+              onChange={(e) => setViewFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="all">All Tickets</option>
+              <option value="my-tickets">My Tickets</option>
+            </select>
+          </div>
+
           {/* Clear Filters */}
           <div>
             <button
@@ -152,6 +192,7 @@ const TicketsPage: React.FC = () => {
                 setSearchTerm('');
                 setStatusFilter('all');
                 setPriorityFilter('all');
+                setViewFilter('all');
               }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >

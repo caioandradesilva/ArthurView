@@ -67,9 +67,9 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, loading }) => {
               </div>
               <div className="flex items-center space-x-1">
                 <Clock className="h-4 w-4" />
-                <span>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+                <span>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : 'Unknown'}</span>
               </div>
-              <span>ASIC: {ticket.asicId}</span>
+              {ticket.asicId && <span>ASIC: {ticket.asicId}</span>}
             </div>
             
             <div className="flex items-center space-x-2">
