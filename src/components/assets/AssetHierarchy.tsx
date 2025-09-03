@@ -4,99 +4,126 @@ import { FirestoreService } from '../../lib/firestore';
 import type { Site, Container, Rack, ASIC } from '../../types';
 import StatusBadge from '../ui/StatusBadge';
 
-interface HierarchyNode {
-  type: 'site' | 'container' | 'rack' | 'asic';
-  data: Site | Container | Rack | ASIC;
-  children?: HierarchyNode[];
-  expanded?: boolean;
+interface HierarchyData {
+  sites: Site[];
+  containers: { [siteId: string]: Container[] };
+  racks: { [containerId: string]: Rack[] };
+  asics: { [rackId: string]: ASIC[] };
 }
 
 const AssetHierarchy: React.FC = () => {
-  const [hierarchy, setHierarchy] = useState<HierarchyNode[]>([]);
+  const [data, setData] = useState<HierarchyData>({
+    sites: [],
+    containers: {},
+    racks: {},
+    asics: {}
+  });
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    loadHierarchy();
+    loadSites();
   }, []);
 
-  const loadHierarchy = async () => {
+  const loadSites = async () => {
     try {
       const sites = await FirestoreService.getSites();
-      const hierarchyData: HierarchyNode[] = [];
-
-      for (const site of sites) {
-        const siteNode: HierarchyNode = {
-          type: 'site',
-          data: site,
-          children: [],
-        };
-
-        if (expandedNodes.has(site.id)) {
-          const containers = await FirestoreService.getContainersBySite(site.id);
-          
-          for (const container of containers) {
-            const containerNode: HierarchyNode = {
-              type: 'container',
-              data: container,
-              children: [],
-            };
-
-            if (expandedNodes.has(container.id)) {
-              const racks = await FirestoreService.getRacksByContainer(container.id);
-              
-              for (const rack of racks) {
-                const rackNode: HierarchyNode = {
-                  type: 'rack',
-                  data: rack,
-                  children: [],
-                };
-
-                if (expandedNodes.has(rack.id)) {
-                  const asics = await FirestoreService.getASICsByRack(rack.id);
-                  rackNode.children = asics.map(asic => ({
-                    type: 'asic',
-                    data: asic
-                  }));
-                }
-
-                containerNode.children!.push(rackNode);
-              }
-            }
-
-            siteNode.children!.push(containerNode);
-          }
-        }
-
-        hierarchyData.push(siteNode);
-      }
-
-      setHierarchy(hierarchyData);
+      setData(prev => ({ ...prev, sites }));
     } catch (error) {
-      console.error('Error loading hierarchy:', error);
+      console.error('Error loading sites:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleNode = async (nodeId: string) => {
-    const newExpanded = new Set(expandedNodes);
+  const loadContainers = async (siteId: string) => {
+    if (data.containers[siteId]) return; // Already loaded
     
-    if (newExpanded.has(nodeId)) {
-      newExpanded.delete(nodeId);
-    } else {
-      newExpanded.add(nodeId);
-    }
-    
-    setExpandedNodes(newExpanded);
-    
-    // Only reload if we're expanding a node (to fetch children)
-    if (!expandedNodes.has(nodeId)) {
-      await loadHierarchy();
+    setLoadingNodes(prev => new Set(prev).add(siteId));
+    try {
+      const containers = await FirestoreService.getContainersBySite(siteId);
+      setData(prev => ({
+        ...prev,
+        containers: { ...prev.containers, [siteId]: containers }
+      }));
+    } catch (error) {
+      console.error('Error loading containers:', error);
+    } finally {
+      setLoadingNodes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(siteId);
+        return newSet;
+      });
     }
   };
 
-  const getNodeIcon = (type: HierarchyNode['type']) => {
+  const loadRacks = async (containerId: string) => {
+    if (data.racks[containerId]) return; // Already loaded
+    
+    setLoadingNodes(prev => new Set(prev).add(containerId));
+    try {
+      const racks = await FirestoreService.getRacksByContainer(containerId);
+      setData(prev => ({
+        ...prev,
+        racks: { ...prev.racks, [containerId]: racks }
+      }));
+    } catch (error) {
+      console.error('Error loading racks:', error);
+    } finally {
+      setLoadingNodes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(containerId);
+        return newSet;
+      });
+    }
+  };
+
+  const loadASICs = async (rackId: string) => {
+    if (data.asics[rackId]) return; // Already loaded
+    
+    setLoadingNodes(prev => new Set(prev).add(rackId));
+    try {
+      const asics = await FirestoreService.getASICsByRack(rackId);
+      setData(prev => ({
+        ...prev,
+        asics: { ...prev.asics, [rackId]: asics }
+      }));
+    } catch (error) {
+      console.error('Error loading ASICs:', error);
+    } finally {
+      setLoadingNodes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(rackId);
+        return newSet;
+      });
+    }
+  };
+
+  const toggleNode = async (nodeId: string, nodeType: 'site' | 'container' | 'rack') => {
+    const newExpanded = new Set(expandedNodes);
+    
+    if (newExpanded.has(nodeId)) {
+      // Collapse
+      newExpanded.delete(nodeId);
+    } else {
+      // Expand
+      newExpanded.add(nodeId);
+      
+      // Load children data if needed
+      if (nodeType === 'site') {
+        await loadContainers(nodeId);
+      } else if (nodeType === 'container') {
+        await loadRacks(nodeId);
+      } else if (nodeType === 'rack') {
+        await loadASICs(nodeId);
+      }
+    }
+    
+    setExpandedNodes(newExpanded);
+  };
+
+  const getNodeIcon = (type: 'site' | 'container' | 'rack' | 'asic') => {
     const iconProps = { className: "h-4 w-4" };
     
     switch (type) {
@@ -108,69 +135,160 @@ const AssetHierarchy: React.FC = () => {
     }
   };
 
-  const renderNode = (node: HierarchyNode, level: number = 0) => {
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedNodes.has((node.data as any).id);
-    const paddingLeft = level * 20 + 12;
+  const renderSite = (site: Site) => {
+    const isExpanded = expandedNodes.has(site.id);
+    const isLoading = loadingNodes.has(site.id);
+    const containers = data.containers[site.id] || [];
 
     return (
-      <div key={(node.data as any).id} className="mb-1">
+      <div key={site.id} className="mb-1">
         <div
           className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-          style={{ paddingLeft }}
-          onClick={() => toggleNode((node.data as any).id)}
+          onClick={() => toggleNode(site.id, 'site')}
         >
           <div className="flex items-center space-x-2 flex-1 min-w-0">
-            {hasChildren && (
-              <button className="p-0.5 hover:bg-gray-200 rounded">
-                {isExpanded ? (
-                  <ChevronDown className="h-3 w-3 text-gray-500" />
-                ) : (
-                  <ChevronRight className="h-3 w-3 text-gray-500" />
-                )}
-              </button>
-            )}
-            {!hasChildren && <div className="w-4" />}
+            <button className="p-0.5 hover:bg-gray-200 rounded">
+              {isLoading ? (
+                <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : isExpanded ? (
+                <ChevronDown className="h-3 w-3 text-gray-500" />
+              ) : (
+                <ChevronRight className="h-3 w-3 text-gray-500" />
+              )}
+            </button>
             
             <div className="text-gray-500">
-              {getNodeIcon(node.type)}
+              {getNodeIcon('site')}
             </div>
             
             <span className="font-medium text-gray-900 truncate">
-              {node.type === 'site' ? (node.data as Site).name :
-               node.type === 'container' ? (node.data as Container).name :
-               node.type === 'rack' ? (node.data as Rack).name :
-               (node.data as ASIC).macAddress || (node.data as ASIC).serialNumber}
+              {site.name}
             </span>
-            
-            {node.type === 'asic' && (
-              <StatusBadge status={(node.data as ASIC).status} size="sm" />
-            )}
           </div>
           
-          {node.type === 'site' && (
-            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {(node.data as Site).country}
-            </span>
-          )}
-          
-          {node.type === 'asic' && (
-            <div className="text-right">
-              <div className="text-sm font-medium text-gray-900">
-                {(node.data as ASIC).serialNumber}
-              </div>
-              <div className="text-xs text-gray-500">
-                {(node.data as ASIC).hashRate} TH/s
-              </div>
-            </div>
-          )}
+          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {site.country}
+          </span>
         </div>
         
-        {isExpanded && hasChildren && (
-          <div>
-            {node.children!.map(child => renderNode(child, level + 1))}
+        {isExpanded && (
+          <div className="ml-5">
+            {containers.map(container => renderContainer(container))}
           </div>
         )}
+      </div>
+    );
+  };
+
+  const renderContainer = (container: Container) => {
+    const isExpanded = expandedNodes.has(container.id);
+    const isLoading = loadingNodes.has(container.id);
+    const racks = data.racks[container.id] || [];
+
+    return (
+      <div key={container.id} className="mb-1">
+        <div
+          className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+          onClick={() => toggleNode(container.id, 'container')}
+        >
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
+            <button className="p-0.5 hover:bg-gray-200 rounded">
+              {isLoading ? (
+                <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : isExpanded ? (
+                <ChevronDown className="h-3 w-3 text-gray-500" />
+              ) : (
+                <ChevronRight className="h-3 w-3 text-gray-500" />
+              )}
+            </button>
+            
+            <div className="text-gray-500">
+              {getNodeIcon('container')}
+            </div>
+            
+            <span className="font-medium text-gray-900 truncate">
+              {container.name}
+            </span>
+          </div>
+        </div>
+        
+        {isExpanded && (
+          <div className="ml-5">
+            {racks.map(rack => renderRack(rack))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderRack = (rack: Rack) => {
+    const isExpanded = expandedNodes.has(rack.id);
+    const isLoading = loadingNodes.has(rack.id);
+    const asics = data.asics[rack.id] || [];
+
+    return (
+      <div key={rack.id} className="mb-1">
+        <div
+          className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+          onClick={() => toggleNode(rack.id, 'rack')}
+        >
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
+            <button className="p-0.5 hover:bg-gray-200 rounded">
+              {isLoading ? (
+                <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : isExpanded ? (
+                <ChevronDown className="h-3 w-3 text-gray-500" />
+              ) : (
+                <ChevronRight className="h-3 w-3 text-gray-500" />
+              )}
+            </button>
+            
+            <div className="text-gray-500">
+              {getNodeIcon('rack')}
+            </div>
+            
+            <span className="font-medium text-gray-900 truncate">
+              {rack.name}
+            </span>
+          </div>
+        </div>
+        
+        {isExpanded && (
+          <div className="ml-5">
+            {asics.map(asic => renderASIC(asic))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderASIC = (asic: ASIC) => {
+    return (
+      <div key={asic.id} className="mb-1">
+        <div className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors">
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
+            <div className="w-4" /> {/* Spacer for alignment */}
+            
+            <div className="text-gray-500">
+              {getNodeIcon('asic')}
+            </div>
+            
+            <span className="font-medium text-gray-900 truncate">
+              {asic.macAddress || asic.serialNumber}
+            </span>
+            
+            <StatusBadge status={asic.status} size="sm" />
+          </div>
+          
+          <div className="text-right">
+            <div className="text-sm font-medium text-gray-900">
+              {asic.serialNumber}
+            </div>
+            <div className="text-xs text-gray-500">
+              {asic.hashRate} TH/s
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -195,7 +313,7 @@ const AssetHierarchy: React.FC = () => {
       </div>
       
       <div className="p-4">
-        {hierarchy.length === 0 ? (
+        {data.sites.length === 0 ? (
           <div className="text-center py-12">
             <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h4 className="text-lg font-medium text-gray-900 mb-2">No sites configured</h4>
@@ -206,7 +324,7 @@ const AssetHierarchy: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-1">
-            {hierarchy.map(node => renderNode(node))}
+            {data.sites.map(site => renderSite(site))}
           </div>
         )}
       </div>
