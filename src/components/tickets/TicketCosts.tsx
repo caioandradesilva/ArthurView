@@ -62,8 +62,10 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
       setFormData({ description: '', amount: 0, currency: 'USD', category: 'parts' });
       setShowAddForm(false);
       
-      // Force reload to show new cost
-      window.location.reload();
+      // Refresh the page data instead of full reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (error: any) {
       console.error('Error adding cost record:', error);
       setError(`Failed to add cost: ${error.message || 'Unknown error'}`);
