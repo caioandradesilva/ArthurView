@@ -190,9 +190,14 @@ const Dashboard: React.FC = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {ticket.title}
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {ticket.title}
+                          </p>
+                          <span className="text-xs font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                            #{ticket.id.slice(-8)}
+                          </span>
+                        </div>
                         <p className="text-xs text-gray-500">
                           {ticket.createdBy} • {ticket.priority} priority
                         </p>
