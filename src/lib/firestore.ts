@@ -266,20 +266,38 @@ export class FirestoreService {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
   }
 
+  static async getCostsByTicket(ticketId: string): Promise<CostRecord[]> {
+    const q = query(collection(db, 'costs'), where('ticketId', '==', ticketId), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
+  }
   static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
+    // If ticketId is provided but asicId/siteId are missing, get them from the ticket
+    let finalCost = { ...cost };
+    
+    if (cost.ticketId && (!cost.asicId || !cost.siteId)) {
+      const ticket = await this.getTicketById(cost.ticketId);
+      if (ticket) {
+        finalCost.asicId = ticket.asicId || '';
+        finalCost.siteId = ticket.siteId;
+      }
+    }
+    
     const docRef = await addDoc(collection(db, 'costs'), {
-      ...cost,
+      ...finalCost,
       createdAt: serverTimestamp()
     });
     
     // Create audit event
-    await this.createAuditEvent({
-      asicId: cost.asicId,
-      eventType: 'cost_added',
-      description: `Cost added: ${cost.description} - ${cost.currency} ${cost.amount}`,
-      performedBy: cost.createdBy,
-      metadata: { costId: docRef.id, amount: cost.amount, category: cost.category }
-    });
+    if (finalCost.asicId) {
+      await this.createAuditEvent({
+        asicId: finalCost.asicId,
+        eventType: 'cost_added',
+        description: `Cost added: ${finalCost.description} - ${finalCost.currency} ${finalCost.amount}`,
+        performedBy: finalCost.createdBy,
+        metadata: { costId: docRef.id, amount: finalCost.amount, category: finalCost.category, ticketId: finalCost.ticketId }
+      });
+    }
     
     return docRef.id;
   }

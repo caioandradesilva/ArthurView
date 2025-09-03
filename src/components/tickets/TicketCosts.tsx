@@ -26,15 +26,30 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId }) => {
 
     setLoading(true);
     try {
-      // Note: You'll need to modify the cost record creation to include ticketId
-      // This is a simplified implementation
-      console.log('Adding cost to ticket:', { ...formData, ticketId });
+      await FirestoreService.createCostRecord({
+        description: formData.description,
+        amount: formData.amount,
+        currency: formData.currency,
+        category: formData.category,
+        ticketId: ticketId,
+        asicId: '', // Will be populated from ticket data in Firestore service
+        siteId: '', // Will be populated from ticket data in Firestore service
+        isEstimate: true,
+        estimatedBy: userProfile.name,
+        createdBy: userProfile.name,
+        isVisible: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
       setFormData({ description: '', amount: 0, currency: 'USD', category: 'parts' });
       setShowAddForm(false);
-      // Refresh would happen in parent component
-      window.location.reload();
+      // Trigger parent component refresh
+      if (window.location.pathname.includes('/ticket/')) {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error adding cost record:', error);
+      alert('Error adding cost record. Please try again.');
     } finally {
       setLoading(false);
     }

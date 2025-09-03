@@ -54,10 +54,26 @@ const TicketDetailsPage: React.FC = () => {
         setComments(commentsData);
         
         // Load costs for this ticket
+        // Load costs for this ticket (both ticket-specific and ASIC-related costs)
+        let costsData: CostRecord[] = [];
+        
+        // Get costs directly associated with this ticket
+        const ticketCosts = await FirestoreService.getCostsByTicket(id);
+        costsData = [...ticketCosts];
+        
+        // Also get costs associated with the ASIC if there is one
         if (ticketData.asicId) {
-          const costsData = await FirestoreService.getCostsByASIC(ticketData.asicId);
-          setCosts(costsData);
+          const asicCosts = await FirestoreService.getCostsByASIC(ticketData.asicId);
+          // Filter out costs that are already included from ticket costs
+          const uniqueAsicCosts = asicCosts.filter(asicCost => 
+            !costsData.some(ticketCost => ticketCost.id === asicCost.id)
+          );
+          costsData = [...costsData, ...uniqueAsicCosts];
         }
+        
+        // Sort by creation date (newest first)
+        costsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setCosts(costsData);
       } else {
         setTicket(null);
       }
