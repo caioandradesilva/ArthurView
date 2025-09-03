@@ -267,15 +267,25 @@ export class FirestoreService {
   }
 
   static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
+    console.log('FirestoreService.createCostRecord called with:', cost);
+    
+    // Ensure required fields are present
+    if (!cost.description || !cost.createdBy || !cost.siteId) {
+      throw new Error('Missing required fields: description, createdBy, or siteId');
+    }
+    
     const docRef = await addDoc(collection(db, 'costs'), {
       ...cost,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     
+    console.log('Cost record created with ID:', docRef.id);
+    
     // Create audit event
     // Only create audit event if there's an associated ASIC
-    if (cost.asicId) {
+    if (cost.asicId && cost.asicId.trim() !== '') {
+      console.log('Creating audit event for ASIC:', cost.asicId);
       await this.createAuditEvent({
         asicId: cost.asicId,
         eventType: 'cost_added',
@@ -283,6 +293,8 @@ export class FirestoreService {
         performedBy: cost.createdBy,
         metadata: { costId: docRef.id, amount: cost.amount, category: cost.category }
       });
+    } else {
+      console.log('No ASIC associated, skipping audit event');
     }
     
     return docRef.id;

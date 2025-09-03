@@ -23,7 +23,11 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
   const [error, setError] = useState('');
 
   const handleAddCost = async () => {
+    console.log('handleAddCost called with:', { formData, ticketId, siteId, userProfile });
+    
     if (!userProfile || !formData.description.trim() || formData.amount <= 0) {
+      console.error('No user profile found');
+      console.error('Validation failed:', { description: formData.description, amount: formData.amount });
       setError('Please fill in all required fields');
       return;
     }
@@ -32,13 +36,14 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
     setError('');
     
     try {
+      console.log('Creating cost record...');
       await FirestoreService.createCostRecord({
         description: formData.description.trim(),
         amount: formData.amount,
         currency: formData.currency,
         category: formData.category,
         ticketId: ticketId,
-        asicId: '', // Empty string for ticket-only costs
+        asicId: undefined, // Use undefined instead of empty string
         siteId: siteId,
         createdBy: userProfile.name,
         isEstimate: true,
@@ -47,15 +52,15 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
         updatedAt: new Date()
       });
       
+      console.log('Cost record created successfully');
+      
       // Reset form
       setFormData({ description: '', amount: 0, currency: 'USD', category: 'parts' });
       setShowAddForm(false);
       
-      // Refresh the page to show new cost
-      window.location.reload();
-    } catch (error) {
+      // Force reload to show new cost
       console.error('Error adding cost record:', error);
-      setError('Failed to add cost. Please try again.');
+      setError(`Failed to add cost: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
