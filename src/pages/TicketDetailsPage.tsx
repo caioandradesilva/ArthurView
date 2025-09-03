@@ -144,7 +144,14 @@ const TicketDetailsPage: React.FC = () => {
                 <Clock className="h-4 w-4 text-gray-400 mt-0.5" />
                 <div>
                   <span className="font-medium text-gray-900">Created</span>
-                  <p className="text-gray-600">{new Date(ticket.createdAt).toLocaleDateString()}</p>
+                  <p className="text-gray-600">
+                    {ticket.createdAt?.toDate 
+                      ? ticket.createdAt.toDate().toLocaleDateString()
+                      : ticket.createdAt instanceof Date 
+                        ? ticket.createdAt.toLocaleDateString()
+                        : new Date(ticket.createdAt).toLocaleDateString()
+                    }
+                  </p>
                 </div>
               </div>
               

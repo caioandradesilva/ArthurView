@@ -87,7 +87,12 @@ const ASICComments: React.FC<ASICCommentsProps> = ({ comments, asicId }) => {
                   <div className="flex items-center space-x-2 mb-2">
                     <span className="font-medium text-gray-900">{comment.author}</span>
                     <span className="text-sm text-gray-500">
-                      {new Date(comment.createdAt).toLocaleString()}
+                      {comment.createdAt?.toDate 
+                        ? comment.createdAt.toDate().toLocaleString()
+                        : comment.createdAt instanceof Date 
+                          ? comment.createdAt.toLocaleString()
+                          : new Date(comment.createdAt).toLocaleString()
+                      }
                     </span>
                   </div>
                   <p className="text-gray-700 whitespace-pre-wrap">{comment.message}</p>
