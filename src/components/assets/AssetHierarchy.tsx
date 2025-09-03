@@ -208,12 +208,10 @@ const AssetHierarchy: React.FC = () => {
     return (
       <div key={container.id} className="mb-1">
         <div
-          className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors group"
+          className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+          onClick={() => toggleNode(container.id, 'container')}
         >
-          <div 
-            className="flex items-center space-x-2 flex-1 min-w-0 cursor-pointer"
-            onClick={() => toggleNode(container.id, 'container')}
-          >
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
             <button className="p-0.5 hover:bg-gray-200 rounded">
               {isLoading ? (
                 <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -232,16 +230,6 @@ const AssetHierarchy: React.FC = () => {
               {container.name}
             </span>
           </div>
-          
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditModal({ type: 'container', item: container });
-            }}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
-          >
-            <Edit className="h-3 w-3 text-gray-500" />
-          </button>
         </div>
         
         {isExpanded && (
@@ -360,6 +348,43 @@ const AssetHierarchy: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Edit Modals */}
+      {editModal.type === 'site' && editModal.item && (
+        <EditSiteModal
+          isOpen={true}
+          onClose={() => setEditModal({ type: null, item: null })}
+          site={editModal.item as Site}
+          onSuccess={() => {
+            setEditModal({ type: null, item: null });
+            loadSites();
+          }}
+        />
+      )}
+      
+      {editModal.type === 'container' && editModal.item && (
+        <EditContainerModal
+          isOpen={true}
+          onClose={() => setEditModal({ type: null, item: null })}
+          container={editModal.item as Container}
+          onSuccess={() => {
+            setEditModal({ type: null, item: null });
+            loadSites();
+          }}
+        />
+      )}
+      
+      {editModal.type === 'rack' && editModal.item && (
+        <EditRackModal
+          isOpen={true}
+          onClose={() => setEditModal({ type: null, item: null })}
+          rack={editModal.item as Rack}
+          onSuccess={() => {
+            setEditModal({ type: null, item: null });
+            loadSites();
+          }}
+        />
+      )}
     </div>
   );
 };
