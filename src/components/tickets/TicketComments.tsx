@@ -88,10 +88,10 @@ const TicketComments: React.FC<TicketCommentsProps> = ({ comments, ticketId }) =
                     <span className="font-medium text-gray-900">{comment.author}</span>
                     <span className="text-sm text-gray-500">
                       {comment.createdAt?.toDate 
-                        ? comment.createdAt.toDate().toLocaleString()
+                       ? comment.createdAt.toDate().toLocaleDateString('en-US') + ' ' + comment.createdAt.toDate().toLocaleTimeString('en-US', { hour12: true })
                         : comment.createdAt instanceof Date 
-                          ? comment.createdAt.toLocaleString()
-                          : new Date(comment.createdAt).toLocaleString()
+                         ? comment.createdAt.toLocaleDateString('en-US') + ' ' + comment.createdAt.toLocaleTimeString('en-US', { hour12: true })
+                         : new Date(comment.createdAt).toLocaleDateString('en-US') + ' ' + new Date(comment.createdAt).toLocaleTimeString('en-US', { hour12: true })
                       }
                     </span>
                   </div>

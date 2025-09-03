@@ -78,8 +78,8 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, asicsMap, loading }) =
                 <span>
                   {ticket.createdAt 
                     ? (ticket.createdAt.toDate 
-                        ? ticket.createdAt.toDate().toLocaleDateString()
-                        : new Date(ticket.createdAt).toLocaleDateString())
+                       ? ticket.createdAt.toDate().toLocaleDateString('en-US') + ' ' + ticket.createdAt.toDate().toLocaleTimeString('en-US', { hour12: true })
+                       : new Date(ticket.createdAt).toLocaleDateString('en-US') + ' ' + new Date(ticket.createdAt).toLocaleTimeString('en-US', { hour12: true }))
                     : 'Unknown'
                   }
                 </span>

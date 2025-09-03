@@ -146,10 +146,10 @@ const TicketDetailsPage: React.FC = () => {
                   <span className="font-medium text-gray-900">Created</span>
                   <p className="text-gray-600">
                     {ticket.createdAt?.toDate 
-                      ? ticket.createdAt.toDate().toLocaleDateString()
+                     ? ticket.createdAt.toDate().toLocaleDateString('en-US') + ' ' + ticket.createdAt.toDate().toLocaleTimeString('en-US', { hour12: true })
                       : ticket.createdAt instanceof Date 
-                        ? ticket.createdAt.toLocaleDateString()
-                        : new Date(ticket.createdAt).toLocaleDateString()
+                       ? ticket.createdAt.toLocaleDateString('en-US') + ' ' + ticket.createdAt.toLocaleTimeString('en-US', { hour12: true })
+                       : new Date(ticket.createdAt).toLocaleDateString('en-US') + ' ' + new Date(ticket.createdAt).toLocaleTimeString('en-US', { hour12: true })
                     }
                   </p>
                 </div>
