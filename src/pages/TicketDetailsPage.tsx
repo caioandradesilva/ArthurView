@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Ticket as TicketIcon, User, Clock, DollarSign, MessageSquare, Edit } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firestore';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import StatusBadge from '../components/ui/StatusBadge';
 import TicketComments from '../components/tickets/TicketComments';
@@ -34,14 +36,34 @@ const TicketDetailsPage: React.FC = () => {
     if (!id) return;
 
     try {
-      // Note: You'll need to add methods to get ticket by ID and related data
-      // For now, this will be empty until we have data
-      setTicket(null);
-      setASIC(null);
-      setComments([]);
-      setCosts([]);
+      // Load ticket by ID using the service
+      const ticketData = await FirestoreService.getTicketById(id);
+      if (ticketData) {
+        setTicket(ticketData);
+        
+        // Load related ASIC if exists
+        if (ticketData.asicId) {
+          const asicData = await FirestoreService.getASICById(ticketData.asicId);
+          if (asicData) {
+            setASIC(asicData);
+          }
+        }
+        
+        // Load comments for this ticket
+        const commentsData = await FirestoreService.getCommentsByTicket(id);
+        setComments(commentsData);
+        
+        // Load costs for this ticket
+        if (ticketData.asicId) {
+          const costsData = await FirestoreService.getCostsByASIC(ticketData.asicId);
+          setCosts(costsData);
+        }
+      } else {
+        setTicket(null);
+      }
     } catch (error) {
       console.error('Error loading ticket data:', error);
+      setTicket(null);
     } finally {
       setLoading(false);
     }

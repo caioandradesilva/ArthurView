@@ -164,6 +164,18 @@ export class FirestoreService {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
   }
 
+  static async getTicketById(ticketId: string): Promise<Ticket | null> {
+    const docRef = doc(db, 'tickets', ticketId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Ticket : null;
+  }
+
+  static async getASICById(asicId: string): Promise<ASIC | null> {
+    const docRef = doc(db, 'asics', asicId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as ASIC : null;
+  }
+
   static async createTicket(ticket: Omit<Ticket, 'id'>): Promise<string> {
     const docRef = await addDoc(collection(db, 'tickets'), {
       ...ticket,
