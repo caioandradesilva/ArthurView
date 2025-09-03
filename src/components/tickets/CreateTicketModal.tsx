@@ -264,12 +264,8 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           {/* Asset Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Asset (Optional)
+              Select Asset
             </label>
-            
-            <p className="text-sm text-gray-600 mb-3">
-              You can create tickets for specific assets (Sites, Containers, Racks, ASICs) or general issues. Asset selection is optional.
-            </p>
             
             {selectedAsset.data && (
               <div className="mb-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
