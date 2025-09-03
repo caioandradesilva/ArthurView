@@ -267,20 +267,9 @@ export class FirestoreService {
   }
 
   static async getCostsByTicket(ticketId: string): Promise<CostRecord[]> {
-    const q = query(collection(db, 'costs'), where('ticketId', '==', ticketId), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
-  }
-  static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
-    console.log('FirestoreService.createCostRecord called with:', cost);
-    
-    // Ensure required fields are present
-    if (!cost.description || !cost.createdBy || !cost.siteId) {
-      throw new Error('Missing required fields: description, createdBy, or siteId');
-    }
-    
-    // Create a clean cost object, explicitly excluding undefined fields
-    const cleanCost: any = {
       description: cost.description,
       amount: cost.amount,
       currency: cost.currency,
