@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Ticket as TicketIcon } from 'lucide-react';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
+import StatusBadge from '../components/ui/StatusBadge';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,10 +28,11 @@ const TicketsPage: React.FC = () => {
   const loadTickets = async () => {
     setLoading(true);
     try {
-      // For now, just set empty array - we'll implement actual loading later
-      setTickets([]);
+      const ticketsData = await FirestoreService.getAllTickets();
+      setTickets(ticketsData);
     } catch (error) {
       console.error('Error loading tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -113,10 +116,75 @@ const TicketsPage: React.FC = () => {
         ) : (
           <div className="divide-y divide-gray-200">
             {tickets.map((ticket) => (
-              <div key={ticket.id} className="p-6">
-                <h3 className="text-lg font-medium text-gray-900">{ticket.title}</h3>
-                <p className="text-gray-600 mt-1">{ticket.description}</p>
-              </div>
+              <Link
+                key={ticket.id}
+                to={`/ticket/${ticket.id}`}
+                className="block p-4 lg:p-6 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <TicketIcon className="h-5 w-5 text-gray-400" />
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-medium text-gray-900 truncate">{ticket.title}</h3>
+                      {ticket.isUrgent && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
+                          URGENT
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                </div>
+
+                <p className="text-gray-600 mb-4 line-clamp-2">{ticket.description}</p>
+
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-1">
+                      <User className="h-4 w-4" />
+                      <span>{ticket.createdBy}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-4 w-4" />
+                      <span>
+                        {ticket.createdAt 
+                          ? (ticket.createdAt.toDate 
+                              ? ticket.createdAt.toDate().toLocaleDateString()
+                              : new Date(ticket.createdAt).toLocaleDateString())
+                          : 'Unknown'
+                        }
+                      </span>
+                    </div>
+                    {ticket.asicId && (
+                      <div className="flex items-center space-x-1">
+                        <Cpu className="h-4 w-4" />
+                        <span className="truncate">ASIC: {ticket.asicId.substring(0, 8)}...</span>
+                      </div>
+                    )}
+                    {ticket.assignedTo && ticket.assignedTo.length > 0 && (
+                      <div className="flex items-center space-x-1">
+                        <User className="h-4 w-4" />
+                        <span>Assigned: {ticket.assignedTo.join(', ')}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <StatusBadge status={ticket.priority} size="sm" />
+                    <StatusBadge status={ticket.status} size="sm" />
+                  </div>
+                </div>
+                
+                {/* Additional info for mobile */}
+                <div className="mt-3 lg:hidden">
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Site: {ticket.siteId}</span>
+                    {ticket.estimatedCost && ticket.estimatedCost > 0 && (
+                      <span>Est. Cost: {ticket.costCurrency} {ticket.estimatedCost}</span>
+                    )}
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         )}
