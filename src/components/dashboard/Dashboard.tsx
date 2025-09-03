@@ -2,8 +2,6 @@ import React from 'react';
 import { Server, Ticket, DollarSign, Activity, TrendingUp, AlertTriangle } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
-  console.log('Dashboard component rendering');
-
   const dashboardCards = [
     {
       title: 'Total ASICs',

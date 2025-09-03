@@ -13,8 +13,6 @@ import TicketDetailsPage from './pages/TicketDetailsPage';
 const AppContent: React.FC = () => {
   const { currentUser, loading } = useAuth();
 
-  console.log('AppContent - currentUser:', !!currentUser, 'loading:', loading);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

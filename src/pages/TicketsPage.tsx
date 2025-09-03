@@ -7,8 +7,6 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Ticket } from '../types';
 
 const TicketsPage: React.FC = () => {
-  console.log('TicketsPage component rendering');
-  
   const { userProfile } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,19 +18,16 @@ const TicketsPage: React.FC = () => {
   ];
 
   useEffect(() => {
-    console.log('TicketsPage useEffect - userProfile:', userProfile);
     if (userProfile) {
       loadTickets();
     }
   }, [userProfile]);
 
   const loadTickets = async () => {
-    console.log('Loading tickets...');
     setLoading(true);
     try {
       // For now, just set empty array - we'll implement actual loading later
       setTickets([]);
-      console.log('Tickets loaded successfully');
     } catch (error) {
       console.error('Error loading tickets:', error);
     } finally {

@@ -37,7 +37,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('Auth state changed - user:', !!user);
       setCurrentUser(user);
       
       if (user) {
@@ -46,10 +45,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const profile = { id: userDoc.id, ...userDoc.data() } as User;
-            console.log('User profile loaded:', profile);
             setUserProfile(profile);
           } else {
-            console.log('No user profile found in Firestore');
             setUserProfile(null);
           }
         } catch (error) {
@@ -57,11 +54,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUserProfile(null);
         }
       } else {
-        console.log('No authenticated user');
         setUserProfile(null);
       }
       
-      console.log('Auth loading complete');
       setLoading(false);
     });
 
