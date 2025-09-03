@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from 'lucide-react';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -7,14 +7,18 @@ import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
+import type { Ticket, ASIC } from '../types';
 
 const TicketsPage: React.FC = () => {
   const { userProfile } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
   const [loading, setLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
 
   const breadcrumbItems = [
     { label: 'Tickets' }
@@ -25,6 +29,10 @@ const TicketsPage: React.FC = () => {
       loadTickets();
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [tickets, searchTerm, statusFilter, priorityFilter]);
 
   const loadTickets = async () => {
     setLoading(true);
@@ -56,6 +64,36 @@ const TicketsPage: React.FC = () => {
     }
   };
 
+  const applyFilters = () => {
+    let filtered = [...tickets];
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(ticket => 
+        ticket.title.toLowerCase().includes(searchLower) ||
+        ticket.description.toLowerCase().includes(searchLower) ||
+        ticket.createdBy.toLowerCase().includes(searchLower) ||
+        (ticket.assignedTo && ticket.assignedTo.toLowerCase().includes(searchLower)) ||
+        (ticket.ticketNumber && ticket.ticketNumber.toString().includes(searchLower)) ||
+        (ticket.asicId && asicsMap[ticket.asicId] && 
+         (asicsMap[ticket.asicId].macAddress?.toLowerCase().includes(searchLower) ||
+          asicsMap[ticket.asicId].serialNumber?.toLowerCase().includes(searchLower)))
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(ticket => ticket.status === statusFilter);
+    }
+
+    // Apply priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(ticket => ticket.priority === priorityFilter);
+    }
+
+    setFilteredTickets(filtered);
+  };
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />
@@ -93,16 +131,22 @@ const TicketsPage: React.FC = () => {
           {/* Status Filter */}
           <div>
             <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               <option value="all">All Status</option>
               <option value="open">Open</option>
               <option value="in_progress">In Progress</option>
+              <option value="waiting_parts">Waiting Parts</option>
               <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
             </select>
           </div>
 
           {/* Priority Filter */}
           <div>
             <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
               <option value="all">All Priority</option>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -110,9 +154,28 @@ const TicketsPage: React.FC = () => {
             </select>
           </div>
         </div>
+        
+        {/* Filter Results Summary */}
+        {(searchTerm || statusFilter !== 'all' || priorityFilter !== 'all') && (
+          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+            <span>
+              Showing {filteredTickets.length} of {tickets.length} tickets
+            </span>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setPriorityFilter('all');
+              }}
+              className="text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
       </div>
       
-      <TicketList tickets={tickets} asicsMap={asicsMap} loading={loading} />
+      <TicketList tickets={filteredTickets} asicsMap={asicsMap} loading={loading} />
 
       <CreateTicketModal
         isOpen={isCreateModalOpen}
