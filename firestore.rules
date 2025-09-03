@@ -1,0 +1,151 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+    
+    function isOperator() {
+      return isAuthenticated() && getUserData().role == 'operator';
+    }
+    
+    function isClient() {
+      return isAuthenticated() && getUserData().role == 'client';
+    }
+    
+    function hasAccessToSite(siteId) {
+      let userData = getUserData();
+      return isAdmin() || 
+             userData.canViewAllSites == true || 
+             siteId in userData.siteIds;
+    }
+    
+    function canViewCosts() {
+      return isAdmin() || (isAuthenticated() && getUserData().canViewCosts == true);
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || // Users can read their own data
+        isAdmin() // Admins can read all users
+      );
+      
+      allow write: if isAdmin(); // Only admins can create/update users
+    }
+    
+    // User site access
+    match /userSiteAccess/{accessId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+    
+    // Sites collection
+    match /sites/{siteId} {
+      allow read: if isAuthenticated() && hasAccessToSite(siteId);
+      allow write: if isAdmin() || isOperator();
+    }
+    
+    // Containers collection
+    match /containers/{containerId} {
+      allow read: if isAuthenticated() && hasAccessToSite(resource.data.siteId);
+      allow write: if isAdmin() || isOperator();
+    }
+    
+    // Racks collection
+    match /racks/{rackId} {
+      allow read: if isAuthenticated() && hasAccessToSite(resource.data.siteId);
+      allow write: if isAdmin() || isOperator();
+    }
+    
+    // ASICs collection
+    match /asics/{asicId} {
+      allow read: if isAuthenticated() && (
+        hasAccessToSite(resource.data.siteId) ||
+        (isClient() && resource.data.clientId == request.auth.uid)
+      );
+      
+      allow write: if (isAdmin() || isOperator()) && 
+                      hasAccessToSite(resource.data.siteId);
+    }
+    
+    // Tickets collection
+    match /tickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        hasAccessToSite(resource.data.siteId) ||
+        (isClient() && resource.data.clientVisible == true && 
+         get(/databases/$(database)/documents/asics/$(resource.data.asicId)).data.clientId == request.auth.uid)
+      );
+      
+      allow create: if isAuthenticated() && (
+        (isAdmin() || isOperator()) && hasAccessToSite(request.resource.data.siteId)
+      );
+      
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (isOperator() && hasAccessToSite(resource.data.siteId))
+      );
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Comments collection
+    match /comments/{commentId} {
+      allow read: if isAuthenticated() && (
+        (resource.data.ticketId != null && 
+         hasAccessToSite(get(/databases/$(database)/documents/tickets/$(resource.data.ticketId)).data.siteId)) ||
+        (resource.data.asicId != null && 
+         hasAccessToSite(get(/databases/$(database)/documents/asics/$(resource.data.asicId)).data.siteId))
+      );
+      
+      allow create: if isAuthenticated() && (
+        isAdmin() || isOperator()
+      );
+      
+      allow update, delete: if isAuthenticated() && (
+        resource.data.author == request.auth.uid || isAdmin()
+      );
+    }
+    
+    // Costs collection
+    match /costs/{costId} {
+      allow read: if isAuthenticated() && canViewCosts() && (
+        hasAccessToSite(resource.data.siteId) ||
+        (isClient() && resource.data.isVisible == true &&
+         get(/databases/$(database)/documents/asics/$(resource.data.asicId)).data.clientId == request.auth.uid)
+      );
+      
+      allow create: if isAuthenticated() && (
+        (isAdmin() || isOperator()) && hasAccessToSite(request.resource.data.siteId)
+      );
+      
+      allow update: if isAuthenticated() && (
+        isAdmin() ||
+        (isOperator() && resource.data.createdBy == request.auth.uid && resource.data.isEstimate == true)
+      );
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Audit events collection
+    match /auditEvents/{eventId} {
+      allow read: if isAuthenticated() && 
+                     hasAccessToSite(get(/databases/$(database)/documents/asics/$(resource.data.asicId)).data.siteId);
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Audit events are immutable
+    }
+  }
+}
