@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { FirestoreService } from '../../lib/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Ticket, User } from '../../types';
+import type { Ticket } from '../../types';
 
 interface EditTicketModalProps {
   isOpen: boolean;
@@ -11,145 +11,108 @@ interface EditTicketModalProps {
   onSuccess: () => void;
 }
 
-const EditTicketModal: React.FC<EditTicketModalProps> = ({
-  isOpen,
-  onClose,
-  ticket,
-  onSuccess
-}) => {
+const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, ticket, onSuccess }) => {
   const { userProfile } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [operators, setOperators] = useState<User[]>([]);
-  const [loadingOperators, setLoadingOperators] = useState(false);
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    priority: 'medium' as 'low' | 'medium' | 'high',
-    status: 'open' as 'open' | 'in_progress' | 'resolved',
-    assignedTo: [] as string[]
+    title: ticket.title,
+    description: ticket.description,
+    priority: ticket.priority,
+    status: ticket.status,
+    assignedTo: ticket.assignedTo || ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isOpen && ticket) {
+    if (isOpen) {
       setFormData({
-        title: ticket.title || '',
-        description: ticket.description || '',
-        priority: ticket.priority || 'medium',
-        status: ticket.status || 'open',
-        assignedTo: Array.isArray(ticket.assignedTo) ? ticket.assignedTo : 
-                   ticket.assignedTo ? [ticket.assignedTo] : []
+        title: ticket.title,
+        description: ticket.description,
+        priority: ticket.priority,
+        status: ticket.status,
+        assignedTo: ticket.assignedTo || ''
       });
-      loadOperators();
     }
   }, [isOpen, ticket]);
-
-  const loadOperators = async () => {
-    setLoadingOperators(true);
-    try {
-      const users = await FirestoreService.getUsers();
-      const activeOperators = users.filter(user => 
-        user.isActive && (user.role === 'operator' || user.role === 'admin')
-      );
-      setOperators(activeOperators);
-    } catch (error) {
-      console.error('Error loading operators:', error);
-      setOperators([]);
-    } finally {
-      setLoadingOperators(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userProfile) return;
 
     setLoading(true);
-    try {
-      const updatedTicket: Partial<Ticket> = {
-        title: formData.title,
-        description: formData.description,
-        priority: formData.priority,
-        status: formData.status,
-        assignedTo: formData.assignedTo,
-        updatedAt: new Date(),
-        updatedBy: userProfile.uid
-      };
+    setError('');
 
-      await FirestoreService.updateTicket(ticket.id, updatedTicket);
+    try {
+      const updates: Partial<Ticket> = { ...formData };
+      if (!updates.assignedTo) {
+        updates.assignedTo = undefined;
+      }
+      
+      await FirestoreService.updateTicket(ticket.id, updates, userProfile.name);
       onSuccess();
-    } catch (error) {
-      console.error('Error updating ticket:', error);
-      alert('Failed to update ticket. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Error updating ticket');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAssigneeChange = (value: string) => {
-    if (value === '') {
-      setFormData(prev => ({ ...prev, assignedTo: [] }));
-    } else {
-      setFormData(prev => ({ ...prev, assignedTo: [value] }));
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Edit Ticket</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Title */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Title *
             </label>
             <input
               type="text"
-              id="title"
               required
               value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter ticket title"
             />
           </div>
 
-          {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description *
             </label>
             <textarea
-              id="description"
-              rows={4}
+              required
+              rows={6}
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Describe the issue or request"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Priority */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
-                Priority
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Priority *
               </label>
               <select
-                id="priority"
                 value={formData.priority}
-                onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="low">Low</option>
@@ -158,82 +121,51 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({
               </select>
             </div>
 
-            {/* Status */}
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-                Status
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status *
               </label>
               <select
-                id="status"
                 value={formData.status}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'open' | 'in_progress' | 'resolved' }))}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="open">Open</option>
                 <option value="in_progress">In Progress</option>
+                <option value="waiting_parts">Waiting Parts</option>
                 <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Assigned To
+              </label>
+              <input
+                type="text"
+                value={formData.assignedTo}
+                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                placeholder="Technician name (optional)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              />
             </div>
           </div>
 
-          {/* Assigned To */}
-          <div>
-            <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700 mb-2">
-              Assigned To
-            </label>
-            {loadingOperators ? (
-              <div className="flex items-center space-x-2 text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Loading operators...</span>
-              </div>
-            ) : (
-              <select
-                id="assignedTo"
-                value={formData.assignedTo[0] || ''}
-                onChange={(e) => handleAssigneeChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                disabled={loadingOperators}
-              >
-                <option value="">Unassigned</option>
-                {operators.length === 0 && !loadingOperators ? (
-                  <option disabled>No operators found</option>
-                ) : (
-                  operators.map((operator) => (
-                    <option key={operator.uid} value={operator.uid}>
-                      {operator.name} ({operator.role})
-                    </option>
-                  ))
-                )}
-              </select>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+          <div className="flex space-x-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              disabled={loading}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.title.trim()}
-              className="px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              disabled={loading}
+              className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Updating...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>Update Ticket</span>
-                </>
-              )}
+              {loading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
