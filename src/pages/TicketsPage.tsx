@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import Breadcrumb from '../components/ui/Breadcrumb';
-import StatusBadge from '../components/ui/StatusBadge';
+            >
 import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
@@ -147,6 +146,7 @@ const TicketsPage: React.FC = () => {
             <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
+            >
               <option value="all">All Priority</option>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
