@@ -1,6 +1,6 @@
 // Simple Node.js script to check Firestore database structure
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, query, where, orderBy, limit, getDocs } = require('firebase/firestore');
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 
 // Firebase config - using environment variables or defaults
 const firebaseConfig = {
