@@ -1,132 +1,134 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Ticket as TicketIcon, User, Clock, ArrowRight, MapPin, Cpu } from 'lucide-react';
-import StatusBadge from '../ui/StatusBadge';
-import type { Ticket, ASIC } from '../../types';
+import Breadcrumb from '../components/ui/Breadcrumb';
+import StatusBadge from '../components/ui/StatusBadge';
+import TicketList from '../components/tickets/TicketList';
+import CreateTicketModal from '../components/tickets/CreateTicketModal';
+import { FirestoreService } from '../lib/firestore';
+import { useAuth } from '../contexts/AuthContext';
 
-interface TicketListProps {
-  tickets: Ticket[];
-  asicsMap: { [key: string]: ASIC };
-  loading: boolean;
-}
+const TicketsPage: React.FC = () => {
+  const { userProfile } = useAuth();
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
+  const [loading, setLoading] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-const TicketList: React.FC<TicketListProps> = ({ tickets, asicsMap, loading }) => {
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="animate-pulse space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-5 bg-gray-300 rounded w-1/3"></div>
-                <div className="h-6 bg-gray-300 rounded w-16"></div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const breadcrumbItems = [
+    { label: 'Tickets' }
+  ];
 
-  if (tickets.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-        <TicketIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
-        <p className="text-gray-500">No tickets match your current filters.</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (userProfile) {
+      loadTickets();
+    }
+  }, [userProfile]);
+
+  const loadTickets = async () => {
+    setLoading(true);
+    try {
+      const ticketsData = await FirestoreService.getAllTickets();
+      setTickets(ticketsData);
+      
+      // Load ASIC data for all tickets
+      const asicIds = [...new Set(ticketsData.map(t => t.asicId).filter(Boolean))];
+      const asicsData: { [key: string]: ASIC } = {};
+      
+      for (const asicId of asicIds) {
+        try {
+          const asic = await FirestoreService.getASICById(asicId);
+          if (asic) {
+            asicsData[asicId] = asic;
+          }
+        } catch (error) {
+          console.error(`Error loading ASIC ${asicId}:`, error);
+        }
+      }
+      
+      setAsicsMap(asicsData);
+    } catch (error) {
+      console.error('Error loading tickets:', error);
+      setTickets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-200">
-      {tickets.map((ticket) => (
-        <Link
-          key={ticket.id}
-          to={`/ticket/${ticket.id}`}
-          className="block p-4 lg:p-6 hover:bg-gray-50 transition-colors"
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+      <Breadcrumb items={breadcrumbItems} />
+      
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tickets</h1>
+          <p className="text-gray-600 mt-2">Manage maintenance tickets and issues</p>
+        </div>
+        
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="mt-4 sm:mt-0 bg-primary-500 text-dark-900 px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-3">
-              <TicketIcon className="h-5 w-5 text-gray-400" />
-              <div className="min-w-0">
-                <div className="flex items-center space-x-2">
-                  <h3 className="text-lg font-medium text-gray-900 truncate">{ticket.title}</h3>
-                  <span className="text-xs font-semibold bg-primary-100 text-primary-800 px-2 py-1 rounded">
-                    #{ticket.ticketNumber || 'N/A'}
-                  </span>
-                </div>
-                {ticket.isUrgent && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                    URGENT
-                  </span>
-                )}
-              </div>
-            </div>
-            <ArrowRight className="h-5 w-5 text-gray-400" />
+          <Plus className="h-4 w-4" />
+          <span>Create Ticket</span>
+        </button>
+      </div>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search tickets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
           </div>
 
-          <p className="text-gray-600 mb-4 line-clamp-2">{ticket.description}</p>
+          {/* Status Filter */}
+          <div>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
 
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center space-x-1">
-                <User className="h-4 w-4" />
-                <span>{ticket.createdBy}</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <Clock className="h-4 w-4" />
-                <span>
-                  {ticket.createdAt 
-                    ? (ticket.createdAt.toDate 
-                       ? ticket.createdAt.toDate().toLocaleDateString('en-US') + ' ' + ticket.createdAt.toDate().toLocaleTimeString('en-US', { hour12: true })
-                       : new Date(ticket.createdAt).toLocaleDateString('en-US') + ' ' + new Date(ticket.createdAt).toLocaleTimeString('en-US', { hour12: true }))
-                    : 'Unknown'
-                  }
-                </span>
-              </div>
-              {ticket.asicId && (
-                <div className="flex items-center space-x-1">
-                  <Cpu className="h-4 w-4" />
-                  <span className="text-primary-600 truncate">
-                    ASIC: {asicsMap[ticket.asicId] 
-                      ? (asicsMap[ticket.asicId].macAddress || asicsMap[ticket.asicId].serialNumber)
-                      : 'Loading...'
-                    }
-                  </span>
-                </div>
-              )}
-              {ticket.assignedTo && ticket.assignedTo.length > 0 && (
-                <div className="flex items-center space-x-1">
-                  <User className="h-4 w-4" />
-                  <span>Assigned: {ticket.assignedTo.join(', ')}</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <StatusBadge status={ticket.priority} size="sm" />
-              <StatusBadge status={ticket.status} size="sm" />
-            </div>
+          {/* Priority Filter */}
+          <div>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Priority</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
           </div>
-          
-          {/* Additional info for mobile */}
-          <div className="mt-3 lg:hidden">
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span>Site: {ticket.siteId}</span>
-              {ticket.estimatedCost && ticket.estimatedCost > 0 && (
-                <span>Est. Cost: {ticket.costCurrency} {ticket.estimatedCost}</span>
-              )}
-            </div>
-          </div>
-        </Link>
-      ))}
+        </div>
+      </div>
+      
+      <TicketList 
+        tickets={tickets} 
+        asicsMap={asicsMap} 
+        loading={loading} 
+        onTicketDeleted={loadTickets}
+      />
+
+      <CreateTicketModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          loadTickets();
+        }}
+      />
     </div>
   );
 };
 
-export default TicketList;
+export default TicketsPage;

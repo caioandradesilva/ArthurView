@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from 'lucide-react';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import StatusBadge from '../components/ui/StatusBadge';
