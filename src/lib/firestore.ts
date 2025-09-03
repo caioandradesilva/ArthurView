@@ -274,8 +274,13 @@ export class FirestoreService {
       throw new Error('Missing required fields: description, createdBy, or siteId');
     }
     
+    // Remove undefined fields to prevent Firestore errors
+    const cleanCost = Object.fromEntries(
+      Object.entries(cost).filter(([_, value]) => value !== undefined)
+    );
+    
     const docRef = await addDoc(collection(db, 'costs'), {
-      ...cost,
+      ...cleanCost,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });

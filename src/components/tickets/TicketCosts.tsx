@@ -43,7 +43,7 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
         currency: formData.currency,
         category: formData.category,
         ticketId: ticketId,
-        asicId: undefined, // Use undefined instead of empty string
+        // Don't include asicId at all for ticket-only costs
         siteId: siteId,
         createdBy: userProfile.name,
         isEstimate: true,
