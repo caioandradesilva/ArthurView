@@ -3,10 +3,10 @@ import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from
 import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import StatusBadge from '../components/ui/StatusBadge';
+import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import type { Ticket } from '../types';
 
 const TicketsPage: React.FC = () => {
   const { userProfile } = useAuth();

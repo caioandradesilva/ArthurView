@@ -2,14 +2,15 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Ticket as TicketIcon, User, Clock, ArrowRight, MapPin, Cpu } from 'lucide-react';
 import StatusBadge from '../ui/StatusBadge';
-import type { Ticket } from '../../types';
+import type { Ticket, ASIC } from '../../types';
 
 interface TicketListProps {
   tickets: Ticket[];
+  asicsMap: { [key: string]: ASIC };
   loading: boolean;
 }
 
-const TicketList: React.FC<TicketListProps> = ({ tickets, loading }) => {
+const TicketList: React.FC<TicketListProps> = ({ tickets, asicsMap, loading }) => {
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
