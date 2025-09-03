@@ -9,7 +9,7 @@ const Layout: React.FC = () => {
       
       {/* Main content */}
       <div className="lg:pl-64">
-        <main className="flex-1">
+        <main className="flex-1 min-h-screen">
           <Outlet />
         </main>
       </div>

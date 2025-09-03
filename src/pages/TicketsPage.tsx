@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Filter, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
@@ -23,9 +23,7 @@ const TicketsPage: React.FC = () => {
   ];
 
   useEffect(() => {
-    if (userProfile) {
-      loadTickets();
-    }
+    loadTickets();
   }, [userProfile]);
 
   useEffect(() => {
@@ -33,17 +31,24 @@ const TicketsPage: React.FC = () => {
   }, [tickets, searchTerm, statusFilter, priorityFilter, viewFilter]);
 
   const loadTickets = async () => {
-    if (!userProfile) return;
-    
     try {
       setLoading(true);
+      
+      if (!userProfile) {
+        console.log('No user profile, setting empty tickets');
+        setTickets([]);
+        return;
+      }
+
+      console.log('Loading tickets for user:', userProfile.name, 'role:', userProfile.role);
+      
       let ticketsData: Ticket[] = [];
       
       if (userProfile.role === 'admin' && userProfile.canViewAllSites) {
-        // Admin can see all tickets
+        console.log('Loading all tickets for admin');
         ticketsData = await FirestoreService.getAllTickets();
       } else if (userProfile.siteIds && userProfile.siteIds.length > 0) {
-        // Load tickets from user's assigned sites
+        console.log('Loading tickets for sites:', userProfile.siteIds);
         for (const siteId of userProfile.siteIds) {
           const siteTickets = await FirestoreService.getTicketsBySite(siteId);
           ticketsData = [...ticketsData, ...siteTickets];
@@ -57,10 +62,11 @@ const TicketsPage: React.FC = () => {
             return dateB.getTime() - dateA.getTime();
           });
       } else {
-        // Fallback: load user's own tickets
+        console.log('Loading user tickets for:', userProfile.name);
         ticketsData = await FirestoreService.getTicketsByUserName(userProfile.name);
       }
       
+      console.log('Loaded tickets:', ticketsData.length);
       setTickets(ticketsData);
     } catch (error) {
       console.error('Error loading tickets:', error);
@@ -114,6 +120,8 @@ const TicketsPage: React.FC = () => {
   };
 
   const stats = getTicketStats();
+
+  console.log('Rendering TicketsPage - loading:', loading, 'tickets:', tickets.length, 'filtered:', filteredTickets.length);
 
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
