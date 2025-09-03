@@ -1,134 +1,163 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from 'lucide-react';
+import React from 'react';
+import { Ticket as TicketIcon, User, Clock, ArrowRight, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import Breadcrumb from '../components/ui/Breadcrumb';
-import StatusBadge from '../components/ui/StatusBadge';
-import TicketList from '../components/tickets/TicketList';
-import CreateTicketModal from '../components/tickets/CreateTicketModal';
-import { FirestoreService } from '../lib/firestore';
-import { useAuth } from '../contexts/AuthContext';
+import StatusBadge from '../ui/StatusBadge';
+import { useAuth } from '../../contexts/AuthContext';
+import { FirestoreService } from '../../lib/firestore';
 
-const TicketsPage: React.FC = () => {
+interface TicketListProps {
+  tickets: Ticket[];
+  asicsMap: { [key: string]: ASIC };
+  loading: boolean;
+  onTicketDeleted?: () => void;
+}
+
+const TicketList: React.FC<TicketListProps> = ({ tickets, asicsMap, loading, onTicketDeleted }) => {
   const { userProfile } = useAuth();
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
-  const [loading, setLoading] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [deletingTicketId, setDeletingTicketId] = React.useState<string | null>(null);
 
-  const breadcrumbItems = [
-    { label: 'Tickets' }
-  ];
+  const canDelete = userProfile?.role === 'admin' || userProfile?.role === 'operator';
 
-  useEffect(() => {
-    if (userProfile) {
-      loadTickets();
-    }
-  }, [userProfile]);
+  const handleDeleteTicket = async (ticket: Ticket, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-  const loadTickets = async () => {
-    setLoading(true);
+    if (!canDelete || !userProfile) return;
+
+    const confirmMessage = `Are you sure you want to delete ticket #${ticket.ticketNumber || 'N/A'}?\n\nTitle: ${ticket.title}\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) return;
+
+    setDeletingTicketId(ticket.id);
+    
     try {
-      const ticketsData = await FirestoreService.getAllTickets();
-      setTickets(ticketsData);
-      
-      // Load ASIC data for all tickets
-      const asicIds = [...new Set(ticketsData.map(t => t.asicId).filter(Boolean))];
-      const asicsData: { [key: string]: ASIC } = {};
-      
-      for (const asicId of asicIds) {
-        try {
-          const asic = await FirestoreService.getASICById(asicId);
-          if (asic) {
-            asicsData[asicId] = asic;
-          }
-        } catch (error) {
-          console.error(`Error loading ASIC ${asicId}:`, error);
-        }
-      }
-      
-      setAsicsMap(asicsData);
+      await FirestoreService.deleteTicket(ticket.id, userProfile.email);
+      onTicketDeleted?.();
     } catch (error) {
-      console.error('Error loading tickets:', error);
-      setTickets([]);
+      console.error('Error deleting ticket:', error);
+      alert('Failed to delete ticket. Please try again.');
     } finally {
-      setLoading(false);
+      setDeletingTicketId(null);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+          <p className="text-gray-500 mt-2">Loading tickets...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (tickets.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="p-8 text-center">
+          <TicketIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets found</h3>
+          <p className="text-gray-500">Create your first ticket to get started.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-      <Breadcrumb items={breadcrumbItems} />
-      
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tickets</h1>
-          <p className="text-gray-600 mt-2">Manage maintenance tickets and issues</p>
-        </div>
-        
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="mt-4 sm:mt-0 bg-primary-500 text-dark-900 px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create Ticket</span>
-        </button>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="divide-y divide-gray-200">
+        {tickets.map((ticket) => {
+          const asic = ticket.asicId ? asicsMap[ticket.asicId] : null;
+          const isDeleting = deletingTicketId === ticket.id;
+          
+          return (
+            <div key={ticket.id} className="group hover:bg-gray-50 transition-colors">
+              <Link 
+                to={`/tickets/${ticket.id}`}
+                className="block p-4 lg:p-6"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                          <TicketIcon className="h-5 w-5 text-primary-600" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-gray-500">
+                            #{ticket.ticketNumber || 'N/A'}
+                          </span>
+                          <StatusBadge status={ticket.status} />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 truncate">
+                          {ticket.title}
+                        </h3>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-600 mb-3 line-clamp-2">
+                      {ticket.description}
+                    </p>
+                    
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        <User className="h-4 w-4" />
+                        <span>{ticket.assignedTo || 'Unassigned'}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {ticket.createdAt?.toDate ? 
+                            ticket.createdAt.toDate().toLocaleDateString() : 
+                            'Unknown date'
+                          }
+                        </span>
+                      </div>
+                      {asic && (
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {asic.serialNumber}
+                          </span>
+                        </div>
+                      )}
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        ticket.priority === 'high' ? 'bg-red-100 text-red-800' :
+                        ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {ticket.priority} priority
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 ml-4">
+                    {canDelete && (
+                      <button
+                        onClick={(e) => handleDeleteTicket(ticket, e)}
+                        disabled={isDeleting}
+                        className="opacity-0 group-hover:opacity-100 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-200 disabled:opacity-50"
+                        title="Delete ticket"
+                      >
+                        {isDeleting ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                    <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                  </div>
+                </div>
+              </Link>
+            </div>
+          );
+        })}
       </div>
-      
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search tickets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-              <option value="all">All Status</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-            </select>
-          </div>
-
-          {/* Priority Filter */}
-          <div>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-              <option value="all">All Priority</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      <TicketList 
-        tickets={tickets} 
-        asicsMap={asicsMap} 
-        loading={loading} 
-        onTicketDeleted={loadTickets}
-      />
-
-      <CreateTicketModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={() => {
-          setIsCreateModalOpen(false);
-          loadTickets();
-        }}
-      />
     </div>
   );
 };
 
-export default TicketsPage;
+export default TicketList;
