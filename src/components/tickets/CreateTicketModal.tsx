@@ -61,12 +61,23 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const loadPreselectedAsic = async () => {
     if (!preselectedAsicId) return;
     try {
-      // In a real implementation, you'd have a getASICById method
-      // For now, we'll search by ID in the search results
-      const results = await FirestoreService.searchASICs(preselectedAsicId);
-      const asic = results.find(a => a.id === preselectedAsicId);
-      if (asic) {
-        setSelectedAsic(asic);
+      // Load all ASICs to find the preselected one
+      const sites = await FirestoreService.getSites();
+      let foundAsic: ASIC | null = null;
+      
+      for (const site of sites && !foundAsic) {
+        const containers = await FirestoreService.getContainersBySite(site.id);
+        for (const container of containers && !foundAsic) {
+          const racks = await FirestoreService.getRacksByContainer(container.id);
+          for (const rack of racks && !foundAsic) {
+            const asics = await FirestoreService.getASICsByRack(rack.id);
+            foundAsic = asics.find(a => a.id === preselectedAsicId) || null;
+          }
+        }
+      }
+      
+      if (foundAsic) {
+        setSelectedAsic(foundAsic);
       }
     } catch (error) {
       console.error('Error loading preselected ASIC:', error);
@@ -75,10 +86,35 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
   const searchASICs = async () => {
     try {
-      const results = await FirestoreService.searchASICs(asicSearchTerm);
-      setAsicSearchResults(results);
+      // Get all ASICs from all sites the user has access to
+      const sites = await FirestoreService.getSites();
+      let allASICs: ASIC[] = [];
+      
+      for (const site of sites) {
+        const containers = await FirestoreService.getContainersBySite(site.id);
+        for (const container of containers) {
+          const racks = await FirestoreService.getRacksByContainer(container.id);
+          for (const rack of racks) {
+            const asics = await FirestoreService.getASICsByRack(rack.id);
+            allASICs = [...allASICs, ...asics];
+          }
+        }
+      }
+      
+      // Filter ASICs based on search term
+      const searchLower = asicSearchTerm.toLowerCase();
+      const filteredASICs = allASICs.filter(asic => 
+        (asic.macAddress && asic.macAddress.toLowerCase().includes(searchLower)) ||
+        (asic.serialNumber && asic.serialNumber.toLowerCase().includes(searchLower)) ||
+        (asic.ipAddress && asic.ipAddress.toLowerCase().includes(searchLower)) ||
+        (asic.location && asic.location.toLowerCase().includes(searchLower)) ||
+        (asic.model && asic.model.toLowerCase().includes(searchLower))
+      );
+      
+      setAsicSearchResults(filteredASICs.slice(0, 10)); // Limit to 10 results
     } catch (error) {
       console.error('Error searching ASICs:', error);
+      setAsicSearchResults([]);
     }
   };
 
@@ -198,7 +234,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by MAC address, serial number, IP, or location..."
+                  placeholder="Type at least 3 characters to search ASICs..."
                   value={asicSearchTerm}
                   onChange={(e) => setAsicSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -212,13 +248,24 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                         onClick={() => handleAsicSelect(asic)}
                         className="w-full text-left p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                       >
-                        <div className="font-medium text-gray-900">{asic.macAddress || asic.serialNumber}</div>
+                        <div className="font-medium text-gray-900">
+                          {asic.macAddress || asic.serialNumber}
+                        </div>
                         <div className="text-sm text-gray-600">
-                          {asic.macAddress && <span>Serial: {asic.serialNumber} • </span>}
-                          {asic.location} • {asic.ipAddress}
+                          <span className="font-medium">Serial:</span> {asic.serialNumber} • 
+                          <span className="font-medium">Location:</span> {asic.location} • 
+                          <span className="font-medium">IP:</span> {asic.ipAddress}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {asic.model} • {asic.hashRate} TH/s • Status: {asic.status}
                         </div>
                       </button>
                     ))}
+                  </div>
+                )}
+                {asicSearchTerm.length >= 3 && asicSearchResults.length === 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3">
+                    <p className="text-sm text-gray-500 text-center">No ASICs found matching your search</p>
                   </div>
                 )}
               </div>
