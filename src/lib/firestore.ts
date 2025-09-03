@@ -460,3 +460,4 @@ export class FirestoreService {
       updatedAt: serverTimestamp()
     });
   }
+}
