@@ -26,8 +26,8 @@ const AssetHierarchy: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
   const [editModal, setEditModal] = useState<{
-    type: 'site' | 'container' | 'rack' | null;
-    item: Site | Container | Rack | null;
+    type: 'site' | 'container' | 'rack' | 'asic' | null;
+    item: Site | Container | Rack | ASIC | null;
   }>({ type: null, item: null });
 
   useEffect(() => {
@@ -309,7 +309,7 @@ const AssetHierarchy: React.FC = () => {
   const renderASIC = (asic: ASIC) => {
     return (
       <div key={asic.id} className="mb-1">
-        <div className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors">
+        <div className="flex items-center py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors group">
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             <div className="w-4" /> {/* Spacer for alignment */}
             
@@ -323,6 +323,16 @@ const AssetHierarchy: React.FC = () => {
             
             <StatusBadge status={asic.status} size="sm" />
           </div>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditModal({ type: 'asic', item: asic });
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity mr-2"
+          >
+            <Edit className="h-3 w-3 text-gray-500" />
+          </button>
           
           <div className="text-right">
             <div className="text-sm font-medium text-gray-900">
@@ -406,6 +416,20 @@ const AssetHierarchy: React.FC = () => {
           onSuccess={() => {
             setEditModal({ type: null, item: null });
             loadSites();
+          }}
+        />
+      )}
+      
+      {editModal.type === 'asic' && editModal.item && (
+        <EditASICModal
+          isOpen={true}
+          onClose={() => setEditModal({ type: null, item: null })}
+          asic={editModal.item as ASIC}
+          onSuccess={() => {
+            setEditModal({ type: null, item: null });
+            // Reload the specific rack's ASICs
+            const asic = editModal.item as ASIC;
+            loadASICs(asic.rackId);
           }}
         />
       )}
