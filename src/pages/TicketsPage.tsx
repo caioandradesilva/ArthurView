@@ -112,7 +112,6 @@ const TicketsPage: React.FC = () => {
         </div>
       </div>
       
-            </select>
       <TicketList tickets={tickets} asicsMap={asicsMap} loading={loading} />
 
       <CreateTicketModal
