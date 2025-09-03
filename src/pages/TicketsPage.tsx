@@ -108,6 +108,11 @@ const TicketsPage: React.FC = () => {
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </select>
+          </div>
+        </div>
+      </div>
+      
+            </select>
       <TicketList tickets={tickets} asicsMap={asicsMap} loading={loading} />
 
       <CreateTicketModal
@@ -123,5 +128,3 @@ const TicketsPage: React.FC = () => {
 };
 
 export default TicketsPage;
-  )
-}
