@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "trigger-indexes": "npx tsx src/scripts/triggerIndexes.ts"
+    "trigger-indexes": "npx tsx src/scripts/triggerIndexes.ts",
+    "update-ticket-numbers": "npx tsx src/scripts/updateTicketNumbers.ts"
   },
   "dependencies": {
     "@types/react-router-dom": "^5.3.3",
