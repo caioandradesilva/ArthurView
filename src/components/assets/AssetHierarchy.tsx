@@ -350,7 +350,6 @@ const AssetHierarchy: React.FC = () => {
       </div>
     );
   };
-              e.preventDefault();
 
   if (loading) {
     return (
