@@ -1,536 +1,133 @@
-// Firestore service functions for data operations
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  serverTimestamp,
-  DocumentData,
-  QueryConstraint
-} from 'firebase/firestore';
-import { db } from './firebase';
-import type { Site, Container, Rack, ASIC, Ticket, Comment, CostRecord, AuditEvent } from '../types';
-
-// Generic Firestore operations
-export class FirestoreService {
-  // Sites
-  static async getSites(): Promise<Site[]> {
-    const querySnapshot = await getDocs(collection(db, 'sites'));
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Site));
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+    const querySnapshot = await getDocs(collection(db, 'users'));
+    return querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
   }
 
-  static async createSite(site: Omit<Site, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'sites'), {
-      ...site,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    return docRef.id;
-  }
+import Breadcrumb from '../components/ui/Breadcrumb';
+import StatusBadge from '../components/ui/StatusBadge';
+import TicketList from '../components/tickets/TicketList';
+import CreateTicketModal from '../components/tickets/CreateTicketModal';
+import { FirestoreService } from '../lib/firestore';
+import { useAuth } from '../contexts/AuthContext';
 
-  // Containers
-  static async getContainersBySite(siteId: string): Promise<Container[]> {
-    const q = query(collection(db, 'containers'), where('siteId', '==', siteId));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Container));
-  }
+const TicketsPage: React.FC = () => {
+  const { userProfile } = useAuth();
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
+  const [loading, setLoading] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  static async createContainer(container: Omit<Container, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'containers'), {
-      ...container,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    return docRef.id;
-  }
+  const breadcrumbItems = [
+    { label: 'Tickets' }
+  ];
 
-  // Racks
-  static async getRacksByContainer(containerId: string): Promise<Rack[]> {
-    const q = query(collection(db, 'racks'), where('containerId', '==', containerId));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Rack));
-  }
-
-  static async createRack(rack: Omit<Rack, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'racks'), {
-      ...rack,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    return docRef.id;
-  }
-
-  // ASICs
-  static async getASICsByRack(rackId: string): Promise<ASIC[]> {
-    const q = query(collection(db, 'asics'), where('rackId', '==', rackId));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ASIC));
-  }
-
-  static async getASICBySerial(serialNumber: string): Promise<ASIC | null> {
-    const q = query(collection(db, 'asics'), where('serialNumber', '==', serialNumber), limit(1));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ASIC;
-  }
-
-  static async getASICByMAC(macAddress: string): Promise<ASIC | null> {
-    const q = query(collection(db, 'asics'), where('macAddress', '==', macAddress), limit(1));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as ASIC;
-  }
-  static async createASIC(asic: Omit<ASIC, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'asics'), {
-      ...asic,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    // Create audit event
-    await this.createAuditEvent({
-      asicId: docRef.id,
-      eventType: 'asic_updated',
-      description: 'ASIC created',
-      performedBy: 'system',
-      metadata: { action: 'create' }
-    });
-    
-    return docRef.id;
-  }
-
-  static async updateASIC(id: string, updates: Partial<ASIC>, performedBy: string): Promise<void> {
-    await updateDoc(doc(db, 'asics', id), {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-    
-    // Create audit event
-    await this.createAuditEvent({
-      asicId: id,
-      eventType: 'asic_updated',
-      description: 'ASIC updated',
-      performedBy,
-      metadata: { updates }
-    });
-  }
-
-  // Tickets
-  static async getAllTickets(): Promise<Ticket[]> {
-    const q = query(collection(db, 'tickets'), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
-  }
-
-  static async getTicketsBySite(siteId: string): Promise<Ticket[]> {
-    const q = query(
-      collection(db, 'tickets'), 
-      where('siteId', '==', siteId), 
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
-  }
-
-  static async getTicketsByUser(userId: string): Promise<Ticket[]> {
-    const q = query(
-      collection(db, 'tickets'), 
-      where('createdBy', '==', userId), 
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
-  }
-
-  static async getTicketsByUserName(userName: string): Promise<Ticket[]> {
-    const q = query(
-      collection(db, 'tickets'), 
-      where('createdBy', '==', userName), 
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
-  }
-
-  static async getTicketsByASIC(asicId: string): Promise<Ticket[]> {
-    const q = query(collection(db, 'tickets'), where('asicId', '==', asicId), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
-  }
-
-  static async getTicketById(ticketId: string): Promise<Ticket | null> {
-    const docRef = doc(db, 'tickets', ticketId);
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Ticket : null;
-  }
-
-  static async getASICById(asicId: string): Promise<ASIC | null> {
-    const docRef = doc(db, 'asics', asicId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      return { 
-        id: docSnap.id, 
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-        lastSeen: data.lastSeen?.toDate?.() || data.lastSeen,
-        maintenanceSchedule: data.maintenanceSchedule?.toDate?.() || data.maintenanceSchedule
-      } as ASIC;
+  useEffect(() => {
+    if (userProfile) {
+      loadTickets();
     }
-    return null;
-  }
+  }, [userProfile]);
 
-  static async createTicket(ticket: Omit<Ticket, 'id'>): Promise<string> {
-    // Get the next ticket number
-    const ticketNumber = await this.getNextTicketNumber();
-    
-    const docRef = await addDoc(collection(db, 'tickets'), {
-      ...ticket,
-      ticketNumber,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    // Create audit event
-    await this.createAuditEvent({
-      asicId: ticket.asicId,
-      eventType: 'ticket_created',
-      description: `Ticket #${ticketNumber} created: ${ticket.title}`,
-      performedBy: ticket.createdBy,
-      metadata: { ticketId: docRef.id, ticketNumber, priority: ticket.priority }
-    });
-    
-    return docRef.id;
-  }
-
-  // Get next sequential ticket number
-  static async getNextTicketNumber(): Promise<number> {
+  const loadTickets = async () => {
+    setLoading(true);
     try {
-      // Get the highest ticket number
-      const q = query(collection(db, 'tickets'), orderBy('ticketNumber', 'desc'), limit(1));
-      const querySnapshot = await getDocs(q);
+      const ticketsData = await FirestoreService.getAllTickets();
+      setTickets(ticketsData);
       
-      if (querySnapshot.empty) {
-        return 1001; // Start from 1001 for better looking ticket numbers
+      // Load ASIC data for all tickets
+      const asicIds = [...new Set(ticketsData.map(t => t.asicId).filter(Boolean))];
+      const asicsData: { [key: string]: ASIC } = {};
+      
+      for (const asicId of asicIds) {
+        try {
+          const asic = await FirestoreService.getASICById(asicId);
+          if (asic) {
+            asicsData[asicId] = asic;
+          }
+        } catch (error) {
+          console.error(`Error loading ASIC ${asicId}:`, error);
+        }
       }
       
-      const lastTicket = querySnapshot.docs[0].data();
-      return (lastTicket.ticketNumber || 1000) + 1;
+      setAsicsMap(asicsData);
     } catch (error) {
-      console.error('Error getting next ticket number:', error);
-      // Fallback to timestamp-based number if query fails
-      return Math.floor(Date.now() / 1000);
+      console.error('Error loading tickets:', error);
+      setTickets([]);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  static async updateTicket(id: string, updates: Partial<Ticket>, performedBy: string): Promise<void> {
-    const ticketRef = doc(db, 'tickets', id);
-    const ticketDoc = await getDoc(ticketRef);
-    const currentTicket = ticketDoc.data() as Ticket;
-    
-    await updateDoc(ticketRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-    
-    // Create audit event
-    await this.createAuditEvent({
-      asicId: currentTicket.asicId,
-      eventType: 'ticket_updated',
-      description: `Ticket updated: ${currentTicket.title}`,
-      performedBy,
-      metadata: { ticketId: id, updates }
-    });
-  }
-
-  // Comments
-  static async getCommentsByTicket(ticketId: string): Promise<Comment[]> {
-    const q = query(collection(db, 'comments'), where('ticketId', '==', ticketId), orderBy('createdAt', 'asc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
-  }
-
-  static async getCommentsByASIC(asicId: string): Promise<Comment[]> {
-    const q = query(collection(db, 'comments'), where('asicId', '==', asicId), orderBy('createdAt', 'asc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
-  }
-
-  static async createComment(comment: Omit<Comment, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'comments'), {
-      ...comment,
-      createdAt: serverTimestamp()
-    });
-    
-    // Create audit event if comment is on an ASIC
-    if (comment.asicId) {
-      await this.createAuditEvent({
-        asicId: comment.asicId,
-        eventType: 'comment_added',
-        description: 'Comment added',
-        performedBy: comment.author,
-        metadata: { commentId: docRef.id }
-      });
-    }
-    
-    return docRef.id;
-  }
-
-  // Cost Records
-  static async getCostsByASIC(asicId: string): Promise<CostRecord[]> {
-    const q = query(collection(db, 'costs'), where('asicId', '==', asicId), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return { 
-        id: doc.id, 
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-      } as CostRecord;
-    });
-  }
-
-  static async getCostsByTicket(ticketId: string): Promise<CostRecord[]> {
-    const q = query(collection(db, 'costs'), where('ticketId', '==', ticketId), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return { 
-        id: doc.id, 
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
-      } as CostRecord;
-    });
-  }
-  static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
-    // If ticketId is provided but asicId/siteId are missing, get them from the ticket
-    let finalCost = { ...cost };
-    
-    if (cost.ticketId && (!cost.asicId || !cost.siteId)) {
-      const ticket = await this.getTicketById(cost.ticketId);
-      if (ticket) {
-        finalCost.asicId = ticket.asicId || '';
-        finalCost.siteId = ticket.siteId;
-      }
-    }
-    
-    const docRef = await addDoc(collection(db, 'costs'), {
-      ...finalCost,
-      createdAt: serverTimestamp()
-    });
-    
-    // Create audit event
-    if (finalCost.asicId) {
-      await this.createAuditEvent({
-        asicId: finalCost.asicId,
-        eventType: 'cost_added',
-        description: `Cost added: ${finalCost.description} - ${finalCost.currency} ${finalCost.amount}`,
-        performedBy: finalCost.createdBy,
-        metadata: { costId: docRef.id, amount: finalCost.amount, category: finalCost.category, ticketId: finalCost.ticketId }
-      });
-    }
-    
-    return docRef.id;
-  }
-
-  static async deleteCostRecord(costId: string): Promise<void> {
-    await deleteDoc(doc(db, 'costs', costId));
-  }
-
-  // Audit Events
-  static async getAuditEventsByASIC(asicId: string): Promise<AuditEvent[]> {
-    const q = query(collection(db, 'auditEvents'), where('asicId', '==', asicId), orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditEvent));
-  }
-
-  static async createAuditEvent(event: Omit<AuditEvent, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'auditEvents'), {
-      ...event,
-      createdAt: serverTimestamp()
-    });
-    return docRef.id;
-  }
-
-  // Test queries to trigger automatic index creation
-  // Run these in development to get Firebase index creation links
-  static async triggerIndexCreation() {
-    console.log('🔥 Running test queries to trigger index creation...');
-    
-    try {
-      // This will trigger index creation for tickets by site + status + createdAt
-      const testSiteId = 'test-site-id';
-      const ticketsBySiteAndStatus = query(
-        collection(db, 'tickets'),
-        where('siteId', '==', testSiteId),
-        where('status', '==', 'open'),
-        orderBy('createdAt', 'desc'),
-        limit(1)
-      );
-      await getDocs(ticketsBySiteAndStatus);
-      console.log('✅ Tickets by site + status + createdAt query executed');
-
-      // This will trigger index creation for tickets by site + priority + createdAt
-      const ticketsBySiteAndPriority = query(
-        collection(db, 'tickets'),
-        where('siteId', '==', testSiteId),
-        where('priority', '==', 'high'),
-        orderBy('createdAt', 'desc'),
-        limit(1)
-      );
-      await getDocs(ticketsBySiteAndPriority);
-      console.log('✅ Tickets by site + priority + createdAt query executed');
-
-      // This will trigger index creation for ASICs by site + status
-      const asicsBySiteAndStatus = query(
-        collection(db, 'asics'),
-        where('siteId', '==', testSiteId),
-        where('status', '==', 'online'),
-        orderBy('macAddress', 'asc'),
-        limit(1)
-      );
-      await getDocs(asicsBySiteAndStatus);
-      console.log('✅ ASICs by site + status + macAddress query executed');
-
-      // This will trigger index creation for costs by site + visibility + createdAt
-      const costsBySiteAndVisibility = query(
-        collection(db, 'costs'),
-        where('siteId', '==', testSiteId),
-        where('isVisible', '==', true),
-        orderBy('createdAt', 'desc'),
-        limit(1)
-      );
-      await getDocs(costsBySiteAndVisibility);
-      console.log('✅ Costs by site + visibility + createdAt query executed');
-
-      // This will trigger index creation for comments by ticketId + createdAt
-      const commentsByTicket = query(
-        collection(db, 'comments'),
-        where('ticketId', '==', 'test-ticket-id'),
-        orderBy('createdAt', 'asc'),
-        limit(1)
-      );
-      await getDocs(commentsByTicket);
-      console.log('✅ Comments by ticket + createdAt query executed');
-
-      // This will trigger index creation for audit events by asicId + createdAt
-      const auditEventsByAsic = query(
-        collection(db, 'auditEvents'),
-        where('asicId', '==', 'test-asic-id'),
-        orderBy('createdAt', 'desc'),
-        limit(1)
-      );
-      await getDocs(auditEventsByAsic);
-      console.log('✅ Audit events by ASIC + createdAt query executed');
-
-      console.log('🎉 All test queries completed! Check browser console for index creation links.');
+  return (
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+      <Breadcrumb items={breadcrumbItems} />
       
-    } catch (error: any) {
-      console.log('🔗 Index creation needed! Check the error messages for direct links:');
-      console.error(error);
-    }
-  }
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tickets</h1>
+          <p className="text-gray-600 mt-2">Manage maintenance tickets and issues</p>
+        </div>
+        
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="mt-4 sm:mt-0 bg-primary-500 text-dark-900 px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Create Ticket</span>
+        </button>
+      </div>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search tickets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
 
-  // Search functionality
-  static async searchASICs(searchTerm: string): Promise<ASIC[]> {
-    // Basic implementation using prefix matching
-    const results: ASIC[] = [];
-    const searchLower = searchTerm.toLowerCase();
+          {/* Status Filter */}
+          <div>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
 
-    try {
-      // Search by MAC address
-      const macQuery = query(
-        collection(db, 'asics'), 
-        where('macAddress', '>=', searchTerm), 
-        where('macAddress', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const macResults = await getDocs(macQuery);
-      macResults.docs.forEach(doc => {
-        const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
-          results.push(asic);
-        }
-      });
+          {/* Priority Filter */}
+          <div>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Priority</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      <TicketList tickets={tickets} asicsMap={asicsMap} loading={loading} />
 
-      // Search by serial number
-      const serialQuery = query(
-        collection(db, 'asics'), 
-        where('serialNumber', '>=', searchTerm), 
-        where('serialNumber', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const serialResults = await getDocs(serialQuery);
-      serialResults.docs.forEach(doc => {
-        const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
-          results.push(asic);
-        }
-      });
+      <CreateTicketModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          loadTickets();
+        }}
+      />
+    </div>
+  );
+};
 
-      // Search by IP address
-      const ipQuery = query(
-        collection(db, 'asics'), 
-        where('ipAddress', '>=', searchTerm), 
-        where('ipAddress', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const ipResults = await getDocs(ipQuery);
-      ipResults.docs.forEach(doc => {
-        const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
-          results.push(asic);
-        }
-      });
-
-      // Search by location
-      const locationQuery = query(
-        collection(db, 'asics'), 
-        where('location', '>=', searchTerm), 
-        where('location', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const locationResults = await getDocs(locationQuery);
-      locationResults.docs.forEach(doc => {
-        const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
-          results.push(asic);
-        }
-      });
-    } catch (error) {
-      console.error('Error searching ASICs:', error);
-    }
-
-    return results.slice(0, 20); // Limit to 20 results
-  }
-
-  static async updateSite(id: string, updates: Partial<Site>): Promise<void> {
-    await updateDoc(doc(db, 'sites', id), {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-  }
-
-  static async updateRack(id: string, updates: Partial<Rack>): Promise<void> {
-    await updateDoc(doc(db, 'racks', id), {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-  }
-
-  static async updateContainer(id: string, updates: Partial<Container>): Promise<void> {
-    await updateDoc(doc(db, 'containers', id), {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-  }
-}
+export default TicketsPage;
