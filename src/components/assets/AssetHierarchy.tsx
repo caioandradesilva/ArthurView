@@ -30,7 +30,6 @@ const AssetHierarchy: React.FC = () => {
           type: 'site',
           data: site,
           children: [],
-          expanded: expandedNodes.has(site.id)
         };
 
         if (expandedNodes.has(site.id)) {
@@ -41,7 +40,6 @@ const AssetHierarchy: React.FC = () => {
               type: 'container',
               data: container,
               children: [],
-              expanded: expandedNodes.has(container.id)
             };
 
             if (expandedNodes.has(container.id)) {
@@ -52,7 +50,6 @@ const AssetHierarchy: React.FC = () => {
                   type: 'rack',
                   data: rack,
                   children: [],
-                  expanded: expandedNodes.has(rack.id)
                 };
 
                 if (expandedNodes.has(rack.id)) {
@@ -93,8 +90,10 @@ const AssetHierarchy: React.FC = () => {
     
     setExpandedNodes(newExpanded);
     
-    // Reload hierarchy to fetch children if needed
-    await loadHierarchy();
+    // Only reload if we're expanding a node (to fetch children)
+    if (!expandedNodes.has(nodeId)) {
+      await loadHierarchy();
+    }
   };
 
   const getNodeIcon = (type: HierarchyNode['type']) => {
