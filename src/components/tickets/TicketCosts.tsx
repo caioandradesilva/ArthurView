@@ -37,20 +37,24 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
     
     try {
       console.log('Creating cost record...');
-      await FirestoreService.createCostRecord({
+      
+      // Create cost record without asicId for ticket-only costs
+      const costData = {
         description: formData.description.trim(),
         amount: formData.amount,
         currency: formData.currency,
         category: formData.category,
         ticketId: ticketId,
-        // Don't include asicId at all for ticket-only costs
         siteId: siteId,
         createdBy: userProfile.name,
         isEstimate: true,
         isVisible: true,
         createdAt: new Date(),
         updatedAt: new Date()
-      });
+      };
+      
+      console.log('Cost data to be saved:', costData);
+      await FirestoreService.createCostRecord(costData);
       
       console.log('Cost record created successfully');
       

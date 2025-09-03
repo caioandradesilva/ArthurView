@@ -274,10 +274,28 @@ export class FirestoreService {
       throw new Error('Missing required fields: description, createdBy, or siteId');
     }
     
-    // Remove undefined fields to prevent Firestore errors
-    const cleanCost = Object.fromEntries(
-      Object.entries(cost).filter(([_, value]) => value !== undefined)
-    );
+    // Create a clean cost object, explicitly excluding undefined fields
+    const cleanCost: any = {
+      description: cost.description,
+      amount: cost.amount,
+      currency: cost.currency,
+      category: cost.category,
+      siteId: cost.siteId,
+      createdBy: cost.createdBy,
+      isEstimate: cost.isEstimate,
+      isVisible: cost.isVisible
+    };
+    
+    // Only include optional fields if they have values
+    if (cost.ticketId) {
+      cleanCost.ticketId = cost.ticketId;
+    }
+    
+    if (cost.asicId && cost.asicId.trim() !== '') {
+      cleanCost.asicId = cost.asicId;
+    }
+    
+    console.log('Clean cost data for Firestore:', cleanCost);
     
     const docRef = await addDoc(collection(db, 'costs'), {
       ...cleanCost,
@@ -289,10 +307,10 @@ export class FirestoreService {
     
     // Create audit event
     // Only create audit event if there's an associated ASIC
-    if (cost.asicId && cost.asicId.trim() !== '') {
-      console.log('Creating audit event for ASIC:', cost.asicId);
+    if (cleanCost.asicId) {
+      console.log('Creating audit event for ASIC:', cleanCost.asicId);
       await this.createAuditEvent({
-        asicId: cost.asicId,
+        asicId: cleanCost.asicId,
         eventType: 'cost_added',
         description: `Cost added: ${cost.description} - ${cost.currency} ${cost.amount}`,
         performedBy: cost.createdBy,
