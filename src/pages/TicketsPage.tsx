@@ -3,11 +3,10 @@ import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from
 import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import StatusBadge from '../components/ui/StatusBadge';
-import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import type { Ticket, ASIC } from '../types';
+import type { Ticket } from '../types';
 
 const TicketsPage: React.FC = () => {
   const { userProfile } = useAuth();
@@ -109,105 +108,7 @@ const TicketsPage: React.FC = () => {
               <option value="medium">Medium</option>
               <option value="high">High</option>
             </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Tickets List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading tickets...</p>
-          </div>
-        ) : tickets.length === 0 ? (
-          <div className="p-8 text-center">
-            <TicketIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No tickets yet</h3>
-            <p className="text-gray-500 mb-4">Create your first ticket to get started</p>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="bg-primary-500 text-dark-900 px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
-            >
-              Create First Ticket
-            </button>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {tickets.map((ticket) => (
-              <Link
-                key={ticket.id}
-                to={`/ticket/${ticket.id}`}
-                className="block p-4 lg:p-6 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <TicketIcon className="h-5 w-5 text-gray-400" />
-                    <div className="min-w-0">
-                      <h3 className="text-lg font-medium text-gray-900 truncate">{ticket.title}</h3>
-                      {ticket.isUrgent && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                          URGENT
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400" />
-                </div>
-
-                <p className="text-gray-600 mb-4 line-clamp-2">{ticket.description}</p>
-
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                    <div className="flex items-center space-x-1">
-                      <User className="h-4 w-4" />
-                      <span>{ticket.createdBy}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        {ticket.createdAt 
-                          ? (ticket.createdAt.toDate 
-                              ? ticket.createdAt.toDate().toLocaleDateString()
-                              : new Date(ticket.createdAt).toLocaleDateString())
-                          : 'Unknown'
-                        }
-                      </span>
-                    </div>
-                    {ticket.asicId && (
-                      <div className="flex items-center space-x-1">
-                        <Cpu className="h-4 w-4" />
-                        <span className="truncate">ASIC: {ticket.asicId.substring(0, 8)}...</span>
-                      </div>
-                    )}
-                    {ticket.assignedTo && ticket.assignedTo.length > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <User className="h-4 w-4" />
-                        <span>Assigned: {ticket.assignedTo.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <StatusBadge status={ticket.priority} size="sm" />
-                    <StatusBadge status={ticket.status} size="sm" />
-                  </div>
-                </div>
-                
-                {/* Additional info for mobile */}
-                <div className="mt-3 lg:hidden">
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Site: {ticket.siteId}</span>
-                    {ticket.estimatedCost && ticket.estimatedCost > 0 && (
-                      <span>Est. Cost: {ticket.costCurrency} {ticket.estimatedCost}</span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+      <TicketList tickets={tickets} asicsMap={asicsMap} loading={loading} />
 
       <CreateTicketModal
         isOpen={isCreateModalOpen}
@@ -222,3 +123,5 @@ const TicketsPage: React.FC = () => {
 };
 
 export default TicketsPage;
+  )
+}
