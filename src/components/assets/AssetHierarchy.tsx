@@ -7,6 +7,7 @@ import StatusBadge from '../ui/StatusBadge';
 import EditSiteModal from './EditSiteModal';
 import EditContainerModal from './EditContainerModal';
 import EditRackModal from './EditRackModal';
+import EditASICModal from '../asic/EditASICModal';
 
 interface HierarchyData {
   sites: Site[];
