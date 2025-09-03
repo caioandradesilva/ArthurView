@@ -20,16 +20,20 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
     category: 'parts' as 'parts' | 'labor' | 'other'
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!userProfile) return;
+  const handleAddCost = async () => {
+    if (!userProfile || !formData.description.trim() || formData.amount <= 0) {
+      setError('Please fill in all required fields');
+      return;
+    }
 
     setLoading(true);
+    setError('');
+    
     try {
       await FirestoreService.createCostRecord({
-        description: formData.description,
+        description: formData.description.trim(),
         amount: formData.amount,
         currency: formData.currency,
         category: formData.category,
@@ -42,15 +46,16 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
         createdAt: new Date(),
         updatedAt: new Date()
       });
+      
+      // Reset form
       setFormData({ description: '', amount: 0, currency: 'USD', category: 'parts' });
       setShowAddForm(false);
-      // Instead of reloading, we should call a callback to refresh data
-      if (window.location.pathname.includes('/ticket/')) {
-        window.location.reload();
-      }
+      
+      // Refresh the page to show new cost
+      window.location.reload();
     } catch (error) {
       console.error('Error adding cost record:', error);
-      alert('Error adding cost record. Please try again.');
+      setError('Failed to add cost. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -75,8 +80,9 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
             <p className="text-sm text-gray-600">{costs.length} cost entries</p>
           </div>
           <button
+            type="button"
             onClick={() => setShowAddForm(!showAddForm)}
-           className="flex items-center space-x-2 px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 transition-colors"
           >
             <Plus className="h-4 w-4" />
             <span>Add Cost</span>
@@ -86,8 +92,14 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
 
       {/* Add cost form */}
       {showAddForm && (
-        <form onSubmit={handleSubmit} className="border border-gray-200 rounded-lg p-4">
+        <div className="border border-gray-200 rounded-lg p-4">
           <h4 className="text-lg font-medium text-gray-900 mb-4">Add Cost Entry</h4>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
@@ -152,25 +164,24 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
           <div className="flex space-x-3">
             <button
               type="button"
-              onClick={() => setShowAddForm(false)}
+              onClick={() => {
+                setShowAddForm(false);
+                setError('');
+              }}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleAddCost}
               disabled={loading}
               className="px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleSubmit(e);
-              }}
             >
               {loading ? 'Adding...' : 'Add Cost'}
             </button>
           </div>
-        </form>
+        </div>
       )}
 
       {/* Costs list */}
@@ -191,7 +202,7 @@ const TicketCosts: React.FC<TicketCostsProps> = ({ costs, ticketId, siteId = 'de
                     <span className="capitalize">{cost.category}</span>
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-3 w-3" />
-                      <span>{new Date(cost.createdAt).toLocaleDateString()}</span>
+                      <span>{new Date(cost.createdAt).toLocaleDateString('en-US')}</span>
                     </div>
                     <span>Added by {cost.createdBy}</span>
                   </div>
