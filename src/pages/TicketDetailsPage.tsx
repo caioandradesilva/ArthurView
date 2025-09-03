@@ -53,11 +53,9 @@ const TicketDetailsPage: React.FC = () => {
         const commentsData = await FirestoreService.getCommentsByTicket(id);
         setComments(commentsData);
         
-        // Load costs for this ticket
-        if (ticketData.asicId) {
-          const costsData = await FirestoreService.getCostsByASIC(ticketData.asicId);
-          setCosts(costsData);
-        }
+        // Load costs for this ticket - both ASIC costs and ticket-specific costs
+        const costsData = await FirestoreService.getCostsByTicket(id);
+        setCosts(costsData);
       } else {
         setTicket(null);
       }
@@ -236,7 +234,11 @@ const TicketDetailsPage: React.FC = () => {
           )}
           
           {activeTab === 'costs' && (
-            <TicketCosts costs={costs} ticketId={ticket.id} siteId={ticket.siteId} />
+            <TicketCosts 
+              costs={costs} 
+              ticketId={ticket.id} 
+              siteId={ticket.siteId || 'default-site'} 
+            />
           )}
         </div>
       </div>
