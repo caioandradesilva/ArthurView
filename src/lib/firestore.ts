@@ -263,13 +263,29 @@ export class FirestoreService {
   static async getCostsByASIC(asicId: string): Promise<CostRecord[]> {
     const q = query(collection(db, 'costs'), where('asicId', '==', asicId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      } as CostRecord;
+    });
   }
 
   static async getCostsByTicket(ticketId: string): Promise<CostRecord[]> {
     const q = query(collection(db, 'costs'), where('ticketId', '==', ticketId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CostRecord));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      } as CostRecord;
+    });
   }
   static async createCostRecord(cost: Omit<CostRecord, 'id'>): Promise<string> {
     // If ticketId is provided but asicId/siteId are missing, get them from the ticket

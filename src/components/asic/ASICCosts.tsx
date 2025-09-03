@@ -176,7 +176,14 @@ const ASICCosts: React.FC<ASICCostsProps> = ({ costs, asicId }) => {
                     <span className="capitalize">{cost.category}</span>
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-3 w-3" />
-                      <span>{new Date(cost.createdAt).toLocaleDateString()}</span>
+                      <span>
+                        {cost.createdAt?.toDate 
+                         ? cost.createdAt.toDate().toLocaleDateString('en-US')
+                          : cost.createdAt instanceof Date 
+                           ? cost.createdAt.toLocaleDateString('en-US')
+                           : new Date(cost.createdAt).toLocaleDateString('en-US')
+                        }
+                      </span>
                     </div>
                     <span>Added by {cost.createdBy}</span>
                   </div>
