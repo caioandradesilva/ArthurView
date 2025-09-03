@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
+const getAllUsers = async (): Promise<User[]> => {
     const querySnapshot = await getDocs(collection(db, 'users'));
     return querySnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
   }
