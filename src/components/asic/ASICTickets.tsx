@@ -33,8 +33,8 @@ const ASICTickets: React.FC<ASICTicketsProps> = ({ tickets }) => {
               <TicketIcon className="h-5 w-5 text-gray-400" />
               <div className="flex items-center space-x-2">
                 <h3 className="font-medium text-gray-900">{ticket.title}</h3>
-                <span className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                  #{ticket.id.slice(-8)}
+                <span className="text-xs font-semibold bg-primary-100 text-primary-800 px-2 py-1 rounded">
+                  #{ticket.ticketNumber || 'N/A'}
                 </span>
               </div>
             </div>

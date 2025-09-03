@@ -188,8 +188,12 @@ export class FirestoreService {
   }
 
   static async createTicket(ticket: Omit<Ticket, 'id'>): Promise<string> {
+    // Get the next ticket number
+    const ticketNumber = await this.getNextTicketNumber();
+    
     const docRef = await addDoc(collection(db, 'tickets'), {
       ...ticket,
+      ticketNumber,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -198,12 +202,32 @@ export class FirestoreService {
     await this.createAuditEvent({
       asicId: ticket.asicId,
       eventType: 'ticket_created',
-      description: `Ticket created: ${ticket.title}`,
+      description: `Ticket #${ticketNumber} created: ${ticket.title}`,
       performedBy: ticket.createdBy,
-      metadata: { ticketId: docRef.id, priority: ticket.priority }
+      metadata: { ticketId: docRef.id, ticketNumber, priority: ticket.priority }
     });
     
     return docRef.id;
+  }
+
+  // Get next sequential ticket number
+  static async getNextTicketNumber(): Promise<number> {
+    try {
+      // Get the highest ticket number
+      const q = query(collection(db, 'tickets'), orderBy('ticketNumber', 'desc'), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return 1001; // Start from 1001 for better looking ticket numbers
+      }
+      
+      const lastTicket = querySnapshot.docs[0].data();
+      return (lastTicket.ticketNumber || 1000) + 1;
+    } catch (error) {
+      console.error('Error getting next ticket number:', error);
+      // Fallback to timestamp-based number if query fails
+      return Math.floor(Date.now() / 1000);
+    }
   }
 
   static async updateTicket(id: string, updates: Partial<Ticket>, performedBy: string): Promise<void> {

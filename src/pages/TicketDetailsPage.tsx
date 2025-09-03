@@ -141,8 +141,8 @@ const TicketDetailsPage: React.FC = () => {
               <div>
                 <div className="flex items-center space-x-3 mb-2">
                   <h1 className="text-2xl font-bold text-gray-900">{ticket.title}</h1>
-                  <span className="text-sm font-mono bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
-                    Ticket #{ticket.id.slice(-8)}
+                  <span className="text-lg font-bold bg-primary-100 text-primary-800 px-3 py-1 rounded-lg">
+                    #{ticket.ticketNumber || 'N/A'}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">

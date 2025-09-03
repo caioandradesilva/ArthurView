@@ -194,8 +194,8 @@ const Dashboard: React.FC = () => {
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {ticket.title}
                           </p>
-                          <span className="text-xs font-mono bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                            #{ticket.id.slice(-8)}
+                          <span className="text-xs font-semibold bg-primary-100 text-primary-800 px-1.5 py-0.5 rounded">
+                            #{ticket.ticketNumber || 'N/A'}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500">

@@ -50,6 +50,7 @@ export interface ASIC {
 
 export interface Ticket {
   id: string;
+  ticketNumber: number; // Sequential ticket number for easy identification
   asicId: string;
   siteId: string; // For site-based access control
   title: string;
