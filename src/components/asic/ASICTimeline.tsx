@@ -72,7 +72,14 @@ const ASICTimeline: React.FC<ASICTimelineProps> = ({ events }) => {
               <p className="font-medium text-gray-900">{event.description}</p>
               <time className="text-sm text-gray-500 flex items-center space-x-1">
                 <Clock className="h-3 w-3" />
-                <span>{new Date(event.createdAt).toLocaleString()}</span>
+                <span>
+                  {event.createdAt?.toDate 
+                   ? event.createdAt.toDate().toLocaleDateString('en-US') + ' ' + event.createdAt.toDate().toLocaleTimeString('en-US', { hour12: true })
+                    : event.createdAt instanceof Date 
+                     ? event.createdAt.toLocaleDateString('en-US') + ' ' + event.createdAt.toLocaleTimeString('en-US', { hour12: true })
+                     : new Date(event.createdAt).toLocaleDateString('en-US') + ' ' + new Date(event.createdAt).toLocaleTimeString('en-US', { hour12: true })
+                  }
+                </span>
               </time>
             </div>
             
