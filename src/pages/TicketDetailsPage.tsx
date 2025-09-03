@@ -1,279 +1,129 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Ticket as TicketIcon, User, Clock, DollarSign, MessageSquare, Edit } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firestore';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import StatusBadge from '../components/ui/StatusBadge';
-import TicketComments from '../components/tickets/TicketComments';
-import TicketCosts from '../components/tickets/TicketCosts';
-import EditTicketModal from '../components/tickets/EditTicketModal';
+import TicketList from '../components/tickets/TicketList';
+import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
-import type { Ticket, Comment, CostRecord, ASIC } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
-const TicketDetailsPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const [ticket, setTicket] = useState<Ticket | null>(null);
-  const [asic, setASIC] = useState<ASIC | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [costs, setCosts] = useState<CostRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'costs'>('details');
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+const TicketsPage: React.FC = () => {
+  const { userProfile } = useAuth();
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
+  const [loading, setLoading] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const breadcrumbItems = [
-    { label: 'Tickets', href: '/tickets' },
-    { label: ticket?.title || 'Loading...' }
+    { label: 'Tickets' }
   ];
 
   useEffect(() => {
-    if (id) {
-      loadTicketData();
+    if (userProfile) {
+      loadTickets();
     }
-  }, [id]);
+  }, [userProfile]);
 
-  const loadTicketData = async () => {
-    if (!id) return;
-
+  const loadTickets = async () => {
+    setLoading(true);
     try {
-      // Load ticket by ID using the service
-      const ticketData = await FirestoreService.getTicketById(id);
-      if (ticketData) {
-        setTicket(ticketData);
-        
-        // Load related ASIC if exists
-        if (ticketData.asicId) {
-          const asicData = await FirestoreService.getASICById(ticketData.asicId);
-          if (asicData) {
-            setASIC(asicData);
+      const ticketsData = await FirestoreService.getAllTickets();
+      setTickets(ticketsData);
+      
+      // Load ASIC data for all tickets
+      const asicIds = [...new Set(ticketsData.map(t => t.asicId).filter(Boolean))];
+      const asicsData: { [key: string]: ASIC } = {};
+      
+      for (const asicId of asicIds) {
+        try {
+          const asic = await FirestoreService.getASICById(asicId);
+          if (asic) {
+            asicsData[asicId] = asic;
           }
+        } catch (error) {
+          console.error(`Error loading ASIC ${asicId}:`, error);
         }
-        
-        // Load comments for this ticket
-        const commentsData = await FirestoreService.getCommentsByTicket(id);
-        setComments(commentsData);
-        
-        // Load costs for this ticket
-        // Load costs for this ticket (both ticket-specific and ASIC-related costs)
-        let costsData: CostRecord[] = [];
-        
-        // Get costs directly associated with this ticket
-        const ticketCosts = await FirestoreService.getCostsByTicket(id);
-        costsData = [...ticketCosts];
-        
-        // Also get costs associated with the ASIC if there is one
-        if (ticketData.asicId) {
-          const asicCosts = await FirestoreService.getCostsByASIC(ticketData.asicId);
-          // Filter out costs that are already included from ticket costs
-          const uniqueAsicCosts = asicCosts.filter(asicCost => 
-            !costsData.some(ticketCost => ticketCost.id === asicCost.id)
-          );
-          costsData = [...costsData, ...uniqueAsicCosts];
-        }
-        
-        // Sort by creation date (newest first)
-        costsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setCosts(costsData);
-      } else {
-        setTicket(null);
       }
+      
+      setAsicsMap(asicsData);
     } catch (error) {
-      console.error('Error loading ticket data:', error);
-      setTicket(null);
+      console.error('Error loading tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-300 rounded w-1/3 mb-6"></div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="h-8 bg-gray-300 rounded w-1/2 mb-4"></div>
-            <div className="space-y-3">
-              <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-              <div className="h-4 bg-gray-300 rounded w-2/3"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!ticket) {
-    return (
-      <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-        <div className="text-center py-12">
-          <TicketIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Ticket not found</h2>
-          <p className="text-gray-600 mb-6">The requested ticket could not be found.</p>
-          <Link
-            to="/tickets"
-           className="inline-flex items-center space-x-2 text-primary-600 hover:text-primary-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Tickets</span>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const tabs = [
-    { id: 'details', label: 'Details', icon: TicketIcon },
-    { id: 'comments', label: 'Comments', icon: MessageSquare, count: comments.length },
-    { id: 'costs', label: 'Costs', icon: DollarSign, count: costs.length },
-  ];
-
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />
-
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1">
-            <div className="flex items-start space-x-3 mb-4">
-              <TicketIcon className="h-6 w-6 text-gray-500 mt-1" />
-              <div>
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-2xl font-bold text-gray-900">{ticket.title}</h1>
-                  <span className="text-lg font-bold bg-primary-100 text-primary-800 px-3 py-1 rounded-lg">
-                    #{ticket.ticketNumber || 'N/A'}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <StatusBadge status={ticket.status} />
-                  <StatusBadge status={ticket.priority} />
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div className="flex items-start space-x-2">
-                <User className="h-4 w-4 text-gray-400 mt-0.5" />
-                <div>
-                  <span className="font-medium text-gray-900">Created by</span>
-                  <p className="text-gray-600">{ticket.createdBy}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start space-x-2">
-                <Clock className="h-4 w-4 text-gray-400 mt-0.5" />
-                <div>
-                  <span className="font-medium text-gray-900">Created</span>
-                  <p className="text-gray-600">
-                    {ticket.createdAt?.toDate 
-                     ? ticket.createdAt.toDate().toLocaleDateString('en-US') + ' ' + ticket.createdAt.toDate().toLocaleTimeString('en-US', { hour12: true })
-                      : ticket.createdAt instanceof Date 
-                       ? ticket.createdAt.toLocaleDateString('en-US') + ' ' + ticket.createdAt.toLocaleTimeString('en-US', { hour12: true })
-                       : new Date(ticket.createdAt).toLocaleDateString('en-US') + ' ' + new Date(ticket.createdAt).toLocaleTimeString('en-US', { hour12: true })
-                    }
-                  </p>
-                </div>
-              </div>
-              
-              {ticket.assignedTo && (
-                <div className="flex items-start space-x-2">
-                  <User className="h-4 w-4 text-gray-400 mt-0.5" />
-                  <div>
-                    <span className="font-medium text-gray-900">Assigned to</span>
-                    <p className="text-gray-600">{ticket.assignedTo}</p>
-                  </div>
-                </div>
-              )}
-              
-              {asic && (
-                <div>
-                  <span className="font-medium text-gray-900">ASIC</span>
-                  <Link
-                    to={`/asic/${asic.id}`}
-                    className="block text-primary-600 hover:text-primary-700 truncate"
-                  >
-                    {asic.serialNumber}
-                  </Link>
-                </div>
-              )}
-            </div>
+      
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tickets</h1>
+          <p className="text-gray-600 mt-2">Manage maintenance tickets and issues</p>
+        </div>
+        
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="mt-4 sm:mt-0 bg-primary-500 text-dark-900 px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Create Ticket</span>
+        </button>
+      </div>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search tickets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
           </div>
-          
-          <div className="mt-4 lg:mt-0">
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Edit className="h-4 w-4" />
-              <span>Edit Ticket</span>
-            </button>
+
+          {/* Status Filter */}
+          <div>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </div>
+
+          {/* Priority Filter */}
+          <div>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Priority</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
           </div>
         </div>
       </div>
+      
+      <TicketList tickets={tickets} asicsMap={asicsMap} loading={loading} />
 
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex overflow-x-auto">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium border-b-2 whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                  {tab.count !== undefined && (
-                    <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="p-6">
-          {activeTab === 'details' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Description</h3>
-              <div className="prose max-w-none">
-                <p className="text-gray-700 whitespace-pre-wrap">{ticket.description}</p>
-              </div>
-            </div>
-          )}
-          
-          {activeTab === 'comments' && (
-            <TicketComments comments={comments} ticketId={ticket.id} />
-          )}
-          
-          {activeTab === 'costs' && (
-            <TicketCosts costs={costs} ticketId={ticket.id} />
-          )}
-        </div>
-      </div>
-
-      {/* Edit Modal */}
-      <EditTicketModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        ticket={ticket}
+      <CreateTicketModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
         onSuccess={() => {
-          setIsEditModalOpen(false);
-          loadTicketData();
+          setIsCreateModalOpen(false);
+          loadTickets();
         }}
       />
     </div>
   );
 };
 
-export default TicketDetailsPage;
+export default TicketsPage;
