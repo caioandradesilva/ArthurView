@@ -50,7 +50,25 @@ const ASICDetailsPage: React.FC = () => {
         
         // Load costs for this ASIC
         const costsData = await FirestoreService.getCostsByASIC(id);
-        setCosts(costsData);
+        
+        // Also get costs from tickets related to this ASIC
+        const ticketCosts: CostRecord[] = [];
+        for (const ticket of ticketsData) {
+          const ticketCostsData = await FirestoreService.getCostsByTicket(ticket.id);
+          ticketCosts.push(...ticketCostsData);
+        }
+        
+        // Combine and deduplicate costs
+        const allCosts = [...costsData];
+        ticketCosts.forEach(ticketCost => {
+          if (!allCosts.some(cost => cost.id === ticketCost.id)) {
+            allCosts.push(ticketCost);
+          }
+        });
+        
+        // Sort by creation date (newest first)
+        allCosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setCosts(allCosts);
         
         // Load comments for this ASIC
         const commentsData = await FirestoreService.getCommentsByASIC(id);
