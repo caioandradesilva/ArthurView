@@ -49,6 +49,9 @@ const TicketsPage: React.FC = () => {
         ticketsData = ticketsData
           .filter((ticket, index, self) => self.findIndex(t => t.id === ticket.id) === index)
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      } else {
+        // Fallback: load user's own tickets
+        ticketsData = await FirestoreService.getTicketsByUser(userProfile.name);
       }
       
       setTickets(ticketsData);
@@ -92,11 +95,17 @@ const TicketsPage: React.FC = () => {
     setFilteredTickets(filtered);
   };
 
-  // Add a button to manually trigger index creation for testing
-  const triggerIndexCreation = () => {
-    console.log('🔥 Manually triggering index creation...');
-    FirestoreService.triggerIndexCreation();
+  const getTicketStats = () => {
+    const total = filteredTickets.length;
+    const open = filteredTickets.filter(t => t.status === 'open').length;
+    const inProgress = filteredTickets.filter(t => t.status === 'in_progress').length;
+    const urgent = filteredTickets.filter(t => t.isUrgent).length;
+    
+    return { total, open, inProgress, urgent };
   };
+
+  const stats = getTicketStats();
+
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />
@@ -104,7 +113,15 @@ const TicketsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tickets</h1>
-          <p className="text-gray-600 mt-2">Manage maintenance tickets and issues</p>
+          <p className="text-gray-600 mt-2">
+            Manage maintenance tickets and issues
+            {stats.total > 0 && (
+              <span className="ml-2 text-sm">
+                ({stats.total} total, {stats.open} open, {stats.inProgress} in progress
+                {stats.urgent > 0 && `, ${stats.urgent} urgent`})
+              </span>
+            )}
+          </p>
         </div>
         
         <button
@@ -116,18 +133,6 @@ const TicketsPage: React.FC = () => {
         </button>
       </div>
       
-      {/* Development helper - remove in production */}
-      {import.meta.env.DEV && (
-        <div className="mb-4">
-          <button
-            onClick={triggerIndexCreation}
-            className="px-3 py-1 text-xs bg-yellow-500 text-black rounded hover:bg-yellow-600"
-          >
-            🔥 Trigger Index Creation (Dev Only)
-          </button>
-        </div>
-      )}
-
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -194,12 +199,34 @@ const TicketsPage: React.FC = () => {
                 setPriorityFilter('all');
                 setViewFilter('all');
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Clear Filters
             </button>
           </div>
         </div>
+        
+        {/* Quick stats */}
+        {stats.total > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex flex-wrap gap-4 text-sm">
+              <span className="text-gray-600">
+                <strong>{stats.total}</strong> total tickets
+              </span>
+              <span className="text-blue-600">
+                <strong>{stats.open}</strong> open
+              </span>
+              <span className="text-yellow-600">
+                <strong>{stats.inProgress}</strong> in progress
+              </span>
+              {stats.urgent > 0 && (
+                <span className="text-red-600">
+                  <strong>{stats.urgent}</strong> urgent
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <TicketList tickets={filteredTickets} loading={loading} />

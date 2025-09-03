@@ -148,6 +148,16 @@ export class FirestoreService {
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
   }
 
+  static async getTicketsByUserName(userName: string): Promise<Ticket[]> {
+    const q = query(
+      collection(db, 'tickets'), 
+      where('createdBy', '==', userName), 
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+  }
+
   static async getTicketsByASIC(asicId: string): Promise<Ticket[]> {
     const q = query(collection(db, 'tickets'), where('asicId', '==', asicId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
@@ -347,25 +357,74 @@ export class FirestoreService {
 
   // Search functionality
   static async searchASICs(searchTerm: string): Promise<ASIC[]> {
-    // This is a basic implementation. In production, you might want to use Algolia or similar
-    const queries = [
-      query(collection(db, 'asics'), where('macAddress', '>=', searchTerm), where('macAddress', '<=', searchTerm + '\uf8ff')),
-      query(collection(db, 'asics'), where('serialNumber', '>=', searchTerm), where('serialNumber', '<=', searchTerm + '\uf8ff')),
-      query(collection(db, 'asics'), where('ipAddress', '>=', searchTerm), where('ipAddress', '<=', searchTerm + '\uf8ff')),
-      query(collection(db, 'asics'), where('location', '>=', searchTerm), where('location', '<=', searchTerm + '\uf8ff'))
-    ];
-
+    // Basic implementation using prefix matching
     const results: ASIC[] = [];
-    for (const q of queries) {
-      const querySnapshot = await getDocs(q);
-      querySnapshot.docs.forEach(doc => {
+    const searchLower = searchTerm.toLowerCase();
+
+    try {
+      // Search by MAC address
+      const macQuery = query(
+        collection(db, 'asics'), 
+        where('macAddress', '>=', searchTerm), 
+        where('macAddress', '<=', searchTerm + '\uf8ff'),
+        limit(10)
+      );
+      const macResults = await getDocs(macQuery);
+      macResults.docs.forEach(doc => {
         const asic = { id: doc.id, ...doc.data() } as ASIC;
         if (!results.find(r => r.id === asic.id)) {
           results.push(asic);
         }
       });
+
+      // Search by serial number
+      const serialQuery = query(
+        collection(db, 'asics'), 
+        where('serialNumber', '>=', searchTerm), 
+        where('serialNumber', '<=', searchTerm + '\uf8ff'),
+        limit(10)
+      );
+      const serialResults = await getDocs(serialQuery);
+      serialResults.docs.forEach(doc => {
+        const asic = { id: doc.id, ...doc.data() } as ASIC;
+        if (!results.find(r => r.id === asic.id)) {
+          results.push(asic);
+        }
+      });
+
+      // Search by IP address
+      const ipQuery = query(
+        collection(db, 'asics'), 
+        where('ipAddress', '>=', searchTerm), 
+        where('ipAddress', '<=', searchTerm + '\uf8ff'),
+        limit(10)
+      );
+      const ipResults = await getDocs(ipQuery);
+      ipResults.docs.forEach(doc => {
+        const asic = { id: doc.id, ...doc.data() } as ASIC;
+        if (!results.find(r => r.id === asic.id)) {
+          results.push(asic);
+        }
+      });
+
+      // Search by location
+      const locationQuery = query(
+        collection(db, 'asics'), 
+        where('location', '>=', searchTerm), 
+        where('location', '<=', searchTerm + '\uf8ff'),
+        limit(10)
+      );
+      const locationResults = await getDocs(locationQuery);
+      locationResults.docs.forEach(doc => {
+        const asic = { id: doc.id, ...doc.data() } as ASIC;
+        if (!results.find(r => r.id === asic.id)) {
+          results.push(asic);
+        }
+      });
+    } catch (error) {
+      console.error('Error searching ASICs:', error);
     }
 
-    return results;
+    return results.slice(0, 20); // Limit to 20 results
   }
 }

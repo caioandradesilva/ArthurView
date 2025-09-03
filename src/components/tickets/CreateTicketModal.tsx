@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { FirestoreService } from '../../lib/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import type { ASIC } from '../../types';
+import type { ASIC, Site } from '../../types';
 
 interface CreateTicketModalProps {
   isOpen: boolean;
@@ -27,13 +27,17 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [asicSearchTerm, setAsicSearchTerm] = useState('');
   const [asicSearchResults, setAsicSearchResults] = useState<ASIC[]>([]);
   const [selectedAsic, setSelectedAsic] = useState<ASIC | null>(null);
+  const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen && preselectedAsicId) {
       setFormData(prev => ({ ...prev, asicId: preselectedAsicId }));
-      // You would load the ASIC details here
+      loadPreselectedAsic();
+    }
+    if (isOpen) {
+      loadSites();
     }
   }, [isOpen, preselectedAsicId]);
 
@@ -44,6 +48,30 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       setAsicSearchResults([]);
     }
   }, [asicSearchTerm]);
+
+  const loadSites = async () => {
+    try {
+      const sitesData = await FirestoreService.getSites();
+      setSites(sitesData);
+    } catch (error) {
+      console.error('Error loading sites:', error);
+    }
+  };
+
+  const loadPreselectedAsic = async () => {
+    if (!preselectedAsicId) return;
+    try {
+      // In a real implementation, you'd have a getASICById method
+      // For now, we'll search by ID in the search results
+      const results = await FirestoreService.searchASICs(preselectedAsicId);
+      const asic = results.find(a => a.id === preselectedAsicId);
+      if (asic) {
+        setSelectedAsic(asic);
+      }
+    } catch (error) {
+      console.error('Error loading preselected ASIC:', error);
+    }
+  };
 
   const searchASICs = async () => {
     try {
@@ -69,14 +97,15 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     setError('');
 
     try {
-      // Get the selected ASIC to determine the site
-      let siteId = '';
+      // Determine siteId
+      let siteId = userProfile.siteIds[0] || sites[0]?.id || '';
+      
       if (selectedAsic) {
-        siteId = selectedAsic.siteId;
-      } else if (preselectedAsicId) {
-        // If we have a preselected ASIC, we need to get its siteId
-        // For now, we'll use the first site the user has access to
-        siteId = userProfile.siteIds[0] || '';
+        // Use the ASIC's site if we have one selected
+        const asicSite = sites.find(s => s.id === selectedAsic.siteId);
+        if (asicSite) {
+          siteId = asicSite.id;
+        }
       }
 
       await FirestoreService.createTicket({
@@ -92,13 +121,16 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         estimatedCost: 0,
         costCurrency: 'USD',
         isUrgent: false,
-        clientVisible: userProfile.role === 'client' ? false : true,
+        clientVisible: userProfile.role !== 'client',
         createdAt: new Date(),
         updatedAt: new Date()
       });
+      
       onSuccess();
       setFormData({ title: '', description: '', priority: 'medium', asicId: preselectedAsicId || '' });
       setSelectedAsic(null);
+      setAsicSearchTerm('');
+      setAsicSearchResults([]);
     } catch (err: any) {
       setError(err.message || 'Error creating ticket');
     } finally {
@@ -131,8 +163,36 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           {/* ASIC Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              ASIC * {selectedAsic && `(${selectedAsic.macAddress || selectedAsic.serialNumber})`}
+              Select ASIC *
             </label>
+            
+            {selectedAsic && (
+              <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-green-900">
+                      {selectedAsic.macAddress || selectedAsic.serialNumber}
+                    </p>
+                    <p className="text-sm text-green-700">
+                      {selectedAsic.location} • {selectedAsic.model} • {selectedAsic.ipAddress}
+                    </p>
+                  </div>
+                  {!preselectedAsicId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAsic(null);
+                        setFormData({ ...formData, asicId: '' });
+                      }}
+                      className="text-green-600 hover:text-green-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            
             {!preselectedAsicId && (
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -163,6 +223,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 )}
               </div>
             )}
+            
             {!formData.asicId && (
               <p className="text-sm text-red-600 mt-1">Please select an ASIC</p>
             )}
