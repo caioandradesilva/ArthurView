@@ -157,6 +157,7 @@ const SearchPage: React.FC = () => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-lg font-medium text-blue-900 mb-3">Search Tips</h3>
           <ul className="space-y-2 text-blue-700">
+            <li>• Search by <strong>MAC Address</strong>: Primary hardware identifier (recommended)</li>
             <li>• Search by <strong>Serial Number</strong>: Full or partial serial number</li>
             <li>• Search by <strong>IP Address</strong>: Full or partial IP (e.g., 192.168 or 192.168.1.100)</li>
             <li>• Search by <strong>Location</strong>: Container and rack codes (e.g., DC_11, Rack 02, MDC-11-02)</li>
