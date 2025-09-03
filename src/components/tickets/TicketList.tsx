@@ -52,7 +52,7 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, loading }) => {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
               <TicketIcon className="h-5 w-5 text-gray-400" />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0">
                 <h3 className="text-lg font-medium text-gray-900 truncate">{ticket.title}</h3>
                 {ticket.isUrgent && (
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
@@ -74,7 +74,14 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, loading }) => {
               </div>
               <div className="flex items-center space-x-1">
                 <Clock className="h-4 w-4" />
-                <span>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : 'Unknown'}</span>
+                <span>
+                  {ticket.createdAt 
+                    ? (ticket.createdAt.toDate 
+                        ? ticket.createdAt.toDate().toLocaleDateString()
+                        : new Date(ticket.createdAt).toLocaleDateString())
+                    : 'Unknown'
+                  }
+                </span>
               </div>
               {ticket.asicId && (
                 <div className="flex items-center space-x-1">

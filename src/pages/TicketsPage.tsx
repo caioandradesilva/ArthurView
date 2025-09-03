@@ -16,15 +16,17 @@ const TicketsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [viewFilter, setViewFilter] = useState<string>('all'); // all, my-tickets
+  const [viewFilter, setViewFilter] = useState<string>('all');
 
   const breadcrumbItems = [
     { label: 'Tickets' }
   ];
 
   useEffect(() => {
-    loadTickets();
-  }, []);
+    if (userProfile) {
+      loadTickets();
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     applyFilters();
@@ -34,12 +36,13 @@ const TicketsPage: React.FC = () => {
     if (!userProfile) return;
     
     try {
+      setLoading(true);
       let ticketsData: Ticket[] = [];
       
       if (userProfile.role === 'admin' && userProfile.canViewAllSites) {
         // Admin can see all tickets
         ticketsData = await FirestoreService.getAllTickets();
-      } else if (userProfile.siteIds.length > 0) {
+      } else if (userProfile.siteIds && userProfile.siteIds.length > 0) {
         // Load tickets from user's assigned sites
         for (const siteId of userProfile.siteIds) {
           const siteTickets = await FirestoreService.getTicketsBySite(siteId);
@@ -48,29 +51,35 @@ const TicketsPage: React.FC = () => {
         // Remove duplicates and sort by creation date
         ticketsData = ticketsData
           .filter((ticket, index, self) => self.findIndex(t => t.id === ticket.id) === index)
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          .sort((a, b) => {
+            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+            return dateB.getTime() - dateA.getTime();
+          });
       } else {
         // Fallback: load user's own tickets
-        ticketsData = await FirestoreService.getTicketsByUser(userProfile.name);
+        ticketsData = await FirestoreService.getTicketsByUserName(userProfile.name);
       }
       
       setTickets(ticketsData);
     } catch (error) {
       console.error('Error loading tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
   };
 
   const applyFilters = () => {
-    let filtered = tickets;
+    let filtered = [...tickets];
 
     // Search filter
-    if (searchTerm) {
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(ticket =>
-        ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ticket.asicId.toLowerCase().includes(searchTerm.toLowerCase())
+        ticket.title.toLowerCase().includes(searchLower) ||
+        ticket.description.toLowerCase().includes(searchLower) ||
+        (ticket.asicId && ticket.asicId.toLowerCase().includes(searchLower))
       );
     }
 
