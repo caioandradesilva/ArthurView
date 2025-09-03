@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import TicketList from '../components/tickets/TicketList';
-import CreateTicketModal from '../components/tickets/CreateTicketModal';
+import Breadcrumb from "../ui/Breadcrumb";
+import TicketList from "../tickets/TicketList";
+import CreateTicketModal from "../tickets/CreateTicketModal";
+import { FirestoreService } from "../../lib/firestore";
+import { useAuth } from "../../contexts/AuthContext";
+import type { Ticket, ASIC } from "../../types";
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import type { Ticket, ASIC } from '../types';
