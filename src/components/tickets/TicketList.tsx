@@ -54,7 +54,12 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, asicsMap, loading }) =
             <div className="flex items-center space-x-3">
               <TicketIcon className="h-5 w-5 text-gray-400" />
               <div className="min-w-0">
-                <h3 className="text-lg font-medium text-gray-900 truncate">{ticket.title}</h3>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-lg font-medium text-gray-900 truncate">{ticket.title}</h3>
+                  <span className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                    #{ticket.id.slice(-8)}
+                  </span>
+                </div>
                 {ticket.isUrgent && (
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
                     URGENT

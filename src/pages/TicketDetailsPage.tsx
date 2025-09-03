@@ -139,7 +139,12 @@ const TicketDetailsPage: React.FC = () => {
             <div className="flex items-start space-x-3 mb-4">
               <TicketIcon className="h-6 w-6 text-gray-500 mt-1" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">{ticket.title}</h1>
+                <div className="flex items-center space-x-3 mb-2">
+                  <h1 className="text-2xl font-bold text-gray-900">{ticket.title}</h1>
+                  <span className="text-sm font-mono bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
+                    Ticket #{ticket.id.slice(-8)}
+                  </span>
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <StatusBadge status={ticket.status} />
                   <StatusBadge status={ticket.priority} />
