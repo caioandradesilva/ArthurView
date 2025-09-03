@@ -3,14 +3,16 @@ import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from
 import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import StatusBadge from '../components/ui/StatusBadge';
+import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import type { Ticket } from '../types';
+import type { Ticket, ASIC } from '../types';
 
 const TicketsPage: React.FC = () => {
   const { userProfile } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
   const [loading, setLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,6 +32,23 @@ const TicketsPage: React.FC = () => {
     try {
       const ticketsData = await FirestoreService.getAllTickets();
       setTickets(ticketsData);
+      
+      // Load ASIC data for all tickets
+      const asicIds = [...new Set(ticketsData.map(t => t.asicId).filter(Boolean))];
+      const asicsData: { [key: string]: ASIC } = {};
+      
+      for (const asicId of asicIds) {
+        try {
+          const asic = await FirestoreService.getASICById(asicId);
+          if (asic) {
+            asicsData[asicId] = asic;
+          }
+        } catch (error) {
+          console.error(`Error loading ASIC ${asicId}:`, error);
+        }
+      }
+      
+      setAsicsMap(asicsData);
     } catch (error) {
       console.error('Error loading tickets:', error);
       setTickets([]);

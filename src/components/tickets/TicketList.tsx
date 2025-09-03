@@ -86,7 +86,12 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, loading }) => {
               {ticket.asicId && (
                 <div className="flex items-center space-x-1">
                   <Cpu className="h-4 w-4" />
-                  <span className="truncate">ASIC: {ticket.asicId.substring(0, 8)}...</span>
+                  <span className="truncate">
+                    ASIC: {asicsMap[ticket.asicId] 
+                      ? (asicsMap[ticket.asicId].macAddress || asicsMap[ticket.asicId].serialNumber)
+                      : 'Loading...'
+                    }
+                  </span>
                 </div>
               )}
               {ticket.assignedTo && ticket.assignedTo.length > 0 && (
