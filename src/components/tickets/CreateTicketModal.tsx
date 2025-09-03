@@ -152,7 +152,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         description: formData.description,
         priority: formData.priority,
         status: 'open',
-        asicId: formData.asicId,
+        asicId: formData.asicId || undefined,
         siteId: siteId,
         createdBy: userProfile.name,
         createdBySiteId: siteId,
@@ -202,8 +202,12 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           {/* ASIC Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select ASIC *
+              Select ASIC (Optional)
             </label>
+            
+            <p className="text-sm text-gray-600 mb-3">
+              You can create tickets for ASICs, racks, containers, sites, or general issues. ASIC selection is optional.
+            </p>
             
             {selectedAsic && (
               <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -237,7 +241,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Type at least 3 characters to search ASICs..."
+                  placeholder="Search ASICs by MAC, serial, IP, or location (optional)..."
                   value={asicSearchTerm}
                   onChange={(e) => setAsicSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -273,10 +277,6 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 )}
               </div>
             )}
-            
-            {!formData.asicId && (
-              <p className="text-sm text-red-600 mt-1">Please select an ASIC</p>
-            )}
           </div>
 
           <div>
@@ -289,7 +289,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Brief description of the issue"
+              placeholder="Brief description of the issue (e.g., 'Rack 01 power issue', 'Container DC_11 cooling problem')"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
@@ -304,7 +304,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               rows={6}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detailed description of the issue, symptoms, and any troubleshooting already performed..."
+              placeholder="Detailed description of the issue, affected equipment (rack, container, site), symptoms, and any troubleshooting already performed..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
@@ -336,7 +336,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.asicId}
+              disabled={loading}
               className="flex-1 px-4 py-2 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Creating...' : 'Create Ticket'}
