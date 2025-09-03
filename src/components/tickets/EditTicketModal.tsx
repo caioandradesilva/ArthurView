@@ -1,177 +1,132 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
-import { FirestoreService } from '../../lib/firestore';
-import { useAuth } from '../../contexts/AuthContext';
-import type { Ticket } from '../../types';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firestore';
+import Breadcrumb from '../components/ui/Breadcrumb';
+import StatusBadge from '../components/ui/StatusBadge';
+import TicketList from '../components/tickets/TicketList';
+import CreateTicketModal from '../components/tickets/CreateTicketModal';
+import { FirestoreService } from '../lib/firestore';
+import { useAuth } from '../contexts/AuthContext';
+import type { Ticket, User } from '../types';
 
-interface EditTicketModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  ticket: Ticket;
-  onSuccess: () => void;
-}
-
-const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, ticket, onSuccess }) => {
+const TicketsPage: React.FC = () => {
   const { userProfile } = useAuth();
-  const [formData, setFormData] = useState({
-    title: ticket.title,
-    description: ticket.description,
-    priority: ticket.priority,
-    status: ticket.status,
-    assignedTo: ticket.assignedTo || ''
-  });
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const breadcrumbItems = [
+    { label: 'Tickets' }
+  ];
 
   useEffect(() => {
-    if (isOpen) {
-      setFormData({
-        title: ticket.title,
-        description: ticket.description,
-        priority: ticket.priority,
-        status: ticket.status,
-        assignedTo: ticket.assignedTo || ''
-      });
+    if (userProfile) {
+      loadTickets();
     }
-  }, [isOpen, ticket]);
+  }, [userProfile]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userProfile) return;
-
+  const loadTickets = async () => {
     setLoading(true);
-    setError('');
-
     try {
-      const updates: Partial<Ticket> = { ...formData };
-      if (!updates.assignedTo) {
-        updates.assignedTo = undefined;
+      const ticketsData = await FirestoreService.getAllTickets();
+      setTickets(ticketsData);
+      
+      // Load ASIC data for all tickets
+      const asicIds = [...new Set(ticketsData.map(t => t.asicId).filter(Boolean))];
+      const asicsData: { [key: string]: ASIC } = {};
+      
+      for (const asicId of asicIds) {
+        try {
+          const asic = await FirestoreService.getASICById(asicId);
+          if (asic) {
+            asicsData[asicId] = asic;
+          }
+        } catch (error) {
+          console.error(`Error loading ASIC ${asicId}:`, error);
+        }
       }
       
-      await FirestoreService.updateTicket(ticket.id, updates, userProfile.name);
-      onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Error updating ticket');
+      setAsicsMap(asicsData);
+    } catch (error) {
+      console.error('Error loading tickets:', error);
+      setTickets([]);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Edit Ticket</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+    <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+      <Breadcrumb items={breadcrumbItems} />
+      
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Tickets</h1>
+          <p className="text-gray-600 mt-2">Manage maintenance tickets and issues</p>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title *
-            </label>
+        
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="mt-4 sm:mt-0 bg-primary-500 text-dark-900 px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Create Ticket</span>
+        </button>
+      </div>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              placeholder="Search tickets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
+          {/* Status Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description *
-            </label>
-            <textarea
-              required
-              rows={6}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Priority *
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status *
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="waiting_parts">Waiting Parts</option>
-                <option value="resolved">Resolved</option>
-                <option value="closed">Closed</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assigned To
-              </label>
-              <input
-                type="text"
-                value={formData.assignedTo}
-                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                placeholder="Technician name (optional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
-            </div>
+          {/* Priority Filter */}
+          <div>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+              <option value="all">All Priority</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
           </div>
-
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
+      
+      <TicketList tickets={tickets} asicsMap={asicsMap} loading={loading} />
+
+      <CreateTicketModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => {
+          setIsCreateModalOpen(false);
+          loadTickets();
+        }}
+      />
     </div>
   );
 };
 
-export default EditTicketModal;
+export default TicketsPage;
