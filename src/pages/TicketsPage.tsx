@@ -64,6 +64,11 @@ const TicketsPage: React.FC = () => {
     setFilteredTickets(filtered);
   };
 
+  // Add a button to manually trigger index creation for testing
+  const triggerIndexCreation = () => {
+    console.log('🔥 Manually triggering index creation...');
+    FirestoreService.triggerIndexCreation();
+  };
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />
@@ -82,6 +87,18 @@ const TicketsPage: React.FC = () => {
           <span>Create Ticket</span>
         </button>
       </div>
+      
+      {/* Development helper - remove in production */}
+      {import.meta.env.DEV && (
+        <div className="mb-4">
+          <button
+            onClick={triggerIndexCreation}
+            className="px-3 py-1 text-xs bg-yellow-500 text-black rounded hover:bg-yellow-600"
+          >
+            🔥 Trigger Index Creation (Dev Only)
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">

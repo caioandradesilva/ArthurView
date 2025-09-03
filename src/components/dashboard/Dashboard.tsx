@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Server, Ticket, DollarSign, Activity, TrendingUp, AlertTriangle } from 'lucide-react';
 import { FirestoreService } from '../../lib/firestore';
+import { useAuth } from '../../contexts/AuthContext';
 import type { ASIC, Ticket as TicketType, CostRecord } from '../../types';
 
 const Dashboard: React.FC = () => {
+  const { userProfile } = useAuth();
   const [stats, setStats] = useState({
     totalASICs: 0,
     onlineASICs: 0,
@@ -12,10 +14,23 @@ const Dashboard: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [recentTickets, setRecentTickets] = useState<TicketType[]>([]);
+  const [indexCreationTriggered, setIndexCreationTriggered] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Trigger index creation in development
+  useEffect(() => {
+    if (!indexCreationTriggered && userProfile?.role === 'admin') {
+      setIndexCreationTriggered(true);
+      // Only run in development
+      if (import.meta.env.DEV) {
+        console.log('🔥 Triggering index creation queries...');
+        FirestoreService.triggerIndexCreation();
+      }
+    }
+  }, [userProfile, indexCreationTriggered]);
 
   const loadDashboardData = async () => {
     try {

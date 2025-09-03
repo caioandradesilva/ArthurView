@@ -240,6 +240,85 @@ export class FirestoreService {
     return docRef.id;
   }
 
+  // Test queries to trigger automatic index creation
+  // Run these in development to get Firebase index creation links
+  static async triggerIndexCreation() {
+    console.log('🔥 Running test queries to trigger index creation...');
+    
+    try {
+      // This will trigger index creation for tickets by site + status + createdAt
+      const testSiteId = 'test-site-id';
+      const ticketsBySiteAndStatus = query(
+        collection(db, 'tickets'),
+        where('siteId', '==', testSiteId),
+        where('status', '==', 'open'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      await getDocs(ticketsBySiteAndStatus);
+      console.log('✅ Tickets by site + status + createdAt query executed');
+
+      // This will trigger index creation for tickets by site + priority + createdAt
+      const ticketsBySiteAndPriority = query(
+        collection(db, 'tickets'),
+        where('siteId', '==', testSiteId),
+        where('priority', '==', 'high'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      await getDocs(ticketsBySiteAndPriority);
+      console.log('✅ Tickets by site + priority + createdAt query executed');
+
+      // This will trigger index creation for ASICs by site + status
+      const asicsBySiteAndStatus = query(
+        collection(db, 'asics'),
+        where('siteId', '==', testSiteId),
+        where('status', '==', 'online'),
+        orderBy('macAddress', 'asc'),
+        limit(1)
+      );
+      await getDocs(asicsBySiteAndStatus);
+      console.log('✅ ASICs by site + status + macAddress query executed');
+
+      // This will trigger index creation for costs by site + visibility + createdAt
+      const costsBySiteAndVisibility = query(
+        collection(db, 'costs'),
+        where('siteId', '==', testSiteId),
+        where('isVisible', '==', true),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      await getDocs(costsBySiteAndVisibility);
+      console.log('✅ Costs by site + visibility + createdAt query executed');
+
+      // This will trigger index creation for comments by ticketId + createdAt
+      const commentsByTicket = query(
+        collection(db, 'comments'),
+        where('ticketId', '==', 'test-ticket-id'),
+        orderBy('createdAt', 'asc'),
+        limit(1)
+      );
+      await getDocs(commentsByTicket);
+      console.log('✅ Comments by ticket + createdAt query executed');
+
+      // This will trigger index creation for audit events by asicId + createdAt
+      const auditEventsByAsic = query(
+        collection(db, 'auditEvents'),
+        where('asicId', '==', 'test-asic-id'),
+        orderBy('createdAt', 'desc'),
+        limit(1)
+      );
+      await getDocs(auditEventsByAsic);
+      console.log('✅ Audit events by ASIC + createdAt query executed');
+
+      console.log('🎉 All test queries completed! Check browser console for index creation links.');
+      
+    } catch (error: any) {
+      console.log('🔗 Index creation needed! Check the error messages for direct links:');
+      console.error(error);
+    }
+  }
+
   // Search functionality
   static async searchASICs(searchTerm: string): Promise<ASIC[]> {
     // This is a basic implementation. In production, you might want to use Algolia or similar
