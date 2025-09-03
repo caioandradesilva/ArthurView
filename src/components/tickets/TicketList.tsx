@@ -87,12 +87,16 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, asicsMap, loading }) =
               {ticket.asicId && (
                 <div className="flex items-center space-x-1">
                   <Cpu className="h-4 w-4" />
-                  <span className="truncate">
+                  <Link
+                    to={`/asic/${ticket.asicId}`}
+                    className="text-primary-600 hover:text-primary-700 truncate"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     ASIC: {asicsMap[ticket.asicId] 
                       ? (asicsMap[ticket.asicId].macAddress || asicsMap[ticket.asicId].serialNumber)
                       : 'Loading...'
                     }
-                  </span>
+                  </Link>
                 </div>
               )}
               {ticket.assignedTo && ticket.assignedTo.length > 0 && (

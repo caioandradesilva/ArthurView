@@ -173,7 +173,18 @@ export class FirestoreService {
   static async getASICById(asicId: string): Promise<ASIC | null> {
     const docRef = doc(db, 'asics', asicId);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as ASIC : null;
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return { 
+        id: docSnap.id, 
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        lastSeen: data.lastSeen?.toDate?.() || data.lastSeen,
+        maintenanceSchedule: data.maintenanceSchedule?.toDate?.() || data.maintenanceSchedule
+      } as ASIC;
+    }
+    return null;
   }
 
   static async createTicket(ticket: Omit<Ticket, 'id'>): Promise<string> {

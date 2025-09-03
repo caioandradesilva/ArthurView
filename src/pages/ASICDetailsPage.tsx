@@ -39,15 +39,32 @@ const ASICDetailsPage: React.FC = () => {
     if (!id) return;
 
     try {
-      // Note: You'll need to add a method to get ASIC by ID
-      // For now, this will be empty until we have data
-      setASIC(null);
-      setTickets([]);
-      setCosts([]);
-      setComments([]);
-      setAuditEvents([]);
+      // Load ASIC by ID
+      const asicData = await FirestoreService.getASICById(id);
+      if (asicData) {
+        setASIC(asicData);
+        
+        // Load tickets for this ASIC
+        const ticketsData = await FirestoreService.getTicketsByASIC(id);
+        setTickets(ticketsData);
+        
+        // Load costs for this ASIC
+        const costsData = await FirestoreService.getCostsByASIC(id);
+        setCosts(costsData);
+        
+        // Load comments for this ASIC
+        const commentsData = await FirestoreService.getCommentsByASIC(id);
+        setComments(commentsData);
+        
+        // Load audit events for this ASIC
+        const auditData = await FirestoreService.getAuditEventsByASIC(id);
+        setAuditEvents(auditData);
+      } else {
+        setASIC(null);
+      }
     } catch (error) {
       console.error('Error loading ASIC data:', error);
+      setASIC(null);
     } finally {
       setLoading(false);
     }
