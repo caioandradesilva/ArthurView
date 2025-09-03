@@ -6,6 +6,7 @@ import CreateTicketModal from '../components/tickets/CreateTicketModal';
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import type { Ticket, ASIC } from '../types';
+import Breadcrumb from '../components/ui/Breadcrumb';
 
 const TicketsPage: React.FC = () => {
   const { userProfile } = useAuth();
