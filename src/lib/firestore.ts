@@ -442,67 +442,92 @@ export class FirestoreService {
 
   // Search functionality
   static async searchASICs(searchTerm: string): Promise<ASIC[]> {
-    // Basic implementation using prefix matching
+    // Enhanced search implementation with case-insensitive and partial matching
     const results: ASIC[] = [];
     const searchLower = searchTerm.toLowerCase();
+    const searchUpper = searchTerm.toUpperCase();
+    
+    // If search term is 4 characters or less, also search for it as last 4 digits of MAC
+    const isShortSearch = searchTerm.length <= 4;
 
     try {
-      // Search by MAC address
-      const macQuery = query(
-        collection(db, 'asics'), 
-        where('macAddress', '>=', searchTerm), 
-        where('macAddress', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const macResults = await getDocs(macQuery);
-      macResults.docs.forEach(doc => {
+      // Get all ASICs and perform client-side filtering for better search capabilities
+      // Note: In production with large datasets, consider implementing server-side search
+      const allASICsQuery = query(collection(db, 'asics'), limit(1000));
+      const allASICsSnapshot = await getDocs(allASICsQuery);
+      
+      allASICsSnapshot.docs.forEach(doc => {
         const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
-          results.push(asic);
+        let isMatch = false;
+        
+        // Helper function to check if a field matches the search term
+        const fieldMatches = (field: string | undefined) => {
+          if (!field) return false;
+          const fieldLower = field.toLowerCase();
+          const fieldUpper = field.toUpperCase();
+          
+          // Check for exact matches (case-insensitive)
+          if (fieldLower.includes(searchLower)) return true;
+          if (fieldUpper.includes(searchUpper)) return true;
+          
+          // For MAC addresses, also check last 4 characters if search is short
+          if (isShortSearch && field.length >= 4) {
+            const last4 = field.slice(-4).toLowerCase();
+            if (last4 === searchLower) return true;
+            
+            // Also check last 4 characters without separators for MAC addresses
+            const cleanField = field.replace(/[:-]/g, '');
+            if (cleanField.length >= 4) {
+              const cleanLast4 = cleanField.slice(-4).toLowerCase();
+              if (cleanLast4 === searchLower) return true;
+            }
+          }
+          
+          return false;
+        };
+        
+        // Search in MAC address
+        if (fieldMatches(asic.macAddress)) {
+          isMatch = true;
         }
-      });
-
-      // Search by serial number
-      const serialQuery = query(
-        collection(db, 'asics'), 
-        where('serialNumber', '>=', searchTerm), 
-        where('serialNumber', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const serialResults = await getDocs(serialQuery);
-      serialResults.docs.forEach(doc => {
-        const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
-          results.push(asic);
+        
+        // Search in serial number
+        if (fieldMatches(asic.serialNumber)) {
+          isMatch = true;
         }
-      });
-
-      // Search by IP address
-      const ipQuery = query(
-        collection(db, 'asics'), 
-        where('ipAddress', '>=', searchTerm), 
-        where('ipAddress', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const ipResults = await getDocs(ipQuery);
-      ipResults.docs.forEach(doc => {
-        const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
-          results.push(asic);
+        
+        // Search in IP address
+        if (fieldMatches(asic.ipAddress)) {
+          isMatch = true;
         }
-      });
-
-      // Search by location
-      const locationQuery = query(
-        collection(db, 'asics'), 
-        where('location', '>=', searchTerm), 
-        where('location', '<=', searchTerm + '\uf8ff'),
-        limit(10)
-      );
-      const locationResults = await getDocs(locationQuery);
-      locationResults.docs.forEach(doc => {
-        const asic = { id: doc.id, ...doc.data() } as ASIC;
-        if (!results.find(r => r.id === asic.id)) {
+        
+        // Search in location
+        if (fieldMatches(asic.location)) {
+          isMatch = true;
+        }
+        
+        // Search in model
+        if (fieldMatches(asic.model)) {
+          isMatch = true;
+        }
+        
+        // Search in position (line,column format)
+        const positionString = `${asic.position?.line || ''},${asic.position?.column || ''}`;
+        if (fieldMatches(positionString)) {
+          isMatch = true;
+        }
+        
+        // Search in individual position components
+        if (asic.position) {
+          if (fieldMatches(asic.position.line?.toString())) {
+            isMatch = true;
+          }
+          if (fieldMatches(asic.position.column?.toString())) {
+            isMatch = true;
+          }
+        }
+        
+        if (isMatch && !results.find(r => r.id === asic.id)) {
           results.push(asic);
         }
       });
@@ -510,7 +535,40 @@ export class FirestoreService {
       console.error('Error searching ASICs:', error);
     }
 
-    return results.slice(0, 20); // Limit to 20 results
+    // Sort results by relevance (exact matches first, then partial matches)
+    const sortedResults = results.sort((a, b) => {
+      const aScore = this.calculateSearchScore(a, searchTerm);
+      const bScore = this.calculateSearchScore(b, searchTerm);
+      return bScore - aScore; // Higher score first
+    });
+
+    return sortedResults.slice(0, 50); // Limit to 50 results
+  }
+  
+  // Helper method to calculate search relevance score
+  private static calculateSearchScore(asic: ASIC, searchTerm: string): number {
+    let score = 0;
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Exact matches get higher scores
+    if (asic.macAddress?.toLowerCase() === searchLower) score += 100;
+    if (asic.serialNumber?.toLowerCase() === searchLower) score += 100;
+    if (asic.ipAddress?.toLowerCase() === searchLower) score += 100;
+    
+    // Partial matches get medium scores
+    if (asic.macAddress?.toLowerCase().includes(searchLower)) score += 50;
+    if (asic.serialNumber?.toLowerCase().includes(searchLower)) score += 50;
+    if (asic.ipAddress?.toLowerCase().includes(searchLower)) score += 50;
+    if (asic.location?.toLowerCase().includes(searchLower)) score += 30;
+    if (asic.model?.toLowerCase().includes(searchLower)) score += 20;
+    
+    // Last 4 digits of MAC address get special scoring
+    if (searchTerm.length <= 4 && asic.macAddress) {
+      const cleanMac = asic.macAddress.replace(/[:-]/g, '');
+      if (cleanMac.slice(-4).toLowerCase() === searchLower) score += 75;
+    }
+    
+    return score;
   }
 
   static async updateSite(id: string, updates: Partial<Site>): Promise<void> {
