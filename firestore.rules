@@ -147,5 +147,28 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update, delete: if false; // Audit events are immutable
     }
+    
+    // Clients collection
+    match /clients/{clientId} {
+      allow read: if isAuthenticated() && (isAdmin() || isOperator());
+      allow create, update: if isAdmin() || isOperator();
+      allow delete: if isAdmin();
+    }
+    
+    // Client comments collection
+    match /clientComments/{commentId} {
+      allow read: if isAuthenticated() && (isAdmin() || isOperator());
+      allow create: if isAuthenticated() && (isAdmin() || isOperator());
+      allow update, delete: if isAuthenticated() && (
+        resource.data.author == request.auth.uid || isAdmin()
+      );
+    }
+    
+    // Client audit events collection
+    match /clientAuditEvents/{eventId} {
+      allow read: if isAuthenticated() && (isAdmin() || isOperator());
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Audit events are immutable
+    }
   }
 }
