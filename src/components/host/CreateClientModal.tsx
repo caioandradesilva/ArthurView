@@ -34,14 +34,13 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({ isOpen, onClose, 
       await FirestoreService.createClient({
         name: formData.name,
         location: formData.location,
-        email: formData.email || undefined,
-        phone: formData.phone || undefined,
-        contractDetails: formData.contractDetails || undefined,
+        ...(formData.email && { email: formData.email }),
+        ...(formData.phone && { phone: formData.phone }),
+        ...(formData.contractDetails && { contractDetails: formData.contractDetails }),
         clientSince: new Date(formData.clientSince),
         isActive: formData.isActive,
         numberOfASICs: 0, // Will be calculated
         miningCapacity: 0, // Will be calculated
-        platformId: '', // Will be generated
         createdAt: new Date(),
         updatedAt: new Date()
       }, userProfile.name);
