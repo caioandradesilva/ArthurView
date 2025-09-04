@@ -361,6 +361,248 @@ export class FirestoreService {
     return docRef.id;
   }
 
+  // Client Management
+  static async getAllClients(): Promise<Client[]> {
+    const q = query(collection(db, 'clients'), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        clientSince: data.clientSince?.toDate?.() || data.clientSince,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      } as Client;
+    });
+  }
+
+  static async getClientById(clientId: string): Promise<Client | null> {
+    const docRef = doc(db, 'clients', clientId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return { 
+        id: docSnap.id, 
+        ...data,
+        clientSince: data.clientSince?.toDate?.() || data.clientSince,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+      } as Client;
+    }
+    return null;
+  }
+
+  static async createClient(client: Omit<Client, 'id' | 'platformId'>, performedBy: string): Promise<string> {
+    // Generate platform ID
+    const platformId = await this.generateClientPlatformId();
+    
+    const docRef = await addDoc(collection(db, 'clients'), {
+      ...client,
+      platformId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    
+    // Create audit event
+    await this.createClientAuditEvent({
+      clientId: docRef.id,
+      eventType: 'client_created',
+      description: `Client created: ${client.name}`,
+      performedBy,
+      metadata: { platformId }
+    });
+    
+    return docRef.id;
+  }
+
+  static async updateClient(id: string, updates: Partial<Client>, performedBy: string): Promise<void> {
+    await updateDoc(doc(db, 'clients', id), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    
+    // Create audit event
+    await this.createClientAuditEvent({
+      clientId: id,
+      eventType: 'client_updated',
+      description: 'Client information updated',
+      performedBy,
+      metadata: { updates }
+    });
+  }
+
+  // Generate unique platform ID for clients
+  static async generateClientPlatformId(): Promise<string> {
+    try {
+      // Get the highest platform ID number
+      const q = query(collection(db, 'clients'), orderBy('platformId', 'desc'), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      if (querySnapshot.empty) {
+        return 'CLT-001'; // Start from CLT-001
+      }
+      
+      const lastClient = querySnapshot.docs[0].data();
+      const lastId = lastClient.platformId || 'CLT-000';
+      const lastNumber = parseInt(lastId.split('-')[1]) || 0;
+      const nextNumber = lastNumber + 1;
+      
+      return `CLT-${nextNumber.toString().padStart(3, '0')}`;
+    } catch (error) {
+      console.error('Error generating platform ID:', error);
+      // Fallback to timestamp-based ID
+      const timestamp = Date.now().toString().slice(-6);
+      return `CLT-${timestamp}`;
+    }
+  }
+
+  // Client Comments
+  static async getCommentsByClient(clientId: string): Promise<ClientComment[]> {
+    const q = query(collection(db, 'clientComments'), where('clientId', '==', clientId), orderBy('createdAt', 'asc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClientComment));
+  }
+
+  static async createClientComment(comment: Omit<ClientComment, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'clientComments'), {
+      ...comment,
+      createdAt: serverTimestamp()
+    });
+    
+    // Create audit event
+    await this.createClientAuditEvent({
+      clientId: comment.clientId,
+      eventType: 'comment_added',
+      description: 'Comment added',
+      performedBy: comment.author,
+      metadata: { commentId: docRef.id }
+    });
+    
+    return docRef.id;
+  }
+
+  // Client Audit Events
+  static async getAuditEventsByClient(clientId: string): Promise<ClientAuditEvent[]> {
+    const q = query(collection(db, 'clientAuditEvents'), where('clientId', '==', clientId), orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClientAuditEvent));
+  }
+
+  static async createClientAuditEvent(event: Omit<ClientAuditEvent, 'id'>): Promise<string> {
+    const docRef = await addDoc(collection(db, 'clientAuditEvents'), {
+      ...event,
+      createdAt: serverTimestamp()
+    });
+    return docRef.id;
+  }
+
+  // ASIC-Client Relations
+  static async getASICsByClient(clientId: string): Promise<ASIC[]> {
+    const q = query(collection(db, 'asics'), where('clientId', '==', clientId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        lastSeen: data.lastSeen?.toDate?.() || data.lastSeen,
+        maintenanceSchedule: data.maintenanceSchedule?.toDate?.() || data.maintenanceSchedule
+      } as ASIC;
+    });
+  }
+
+  static async getUnassignedASICs(): Promise<ASIC[]> {
+    const q = query(collection(db, 'asics'), where('clientId', '==', null));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        lastSeen: data.lastSeen?.toDate?.() || data.lastSeen,
+        maintenanceSchedule: data.maintenanceSchedule?.toDate?.() || data.maintenanceSchedule
+      } as ASIC;
+    });
+  }
+
+  static async assignASICToClient(asicId: string, clientId: string, performedBy: string): Promise<void> {
+    await updateDoc(doc(db, 'asics', asicId), {
+      clientId,
+      updatedAt: serverTimestamp()
+    });
+    
+    // Update client's ASIC count and capacity
+    await this.updateClientStats(clientId);
+    
+    // Create audit events
+    await this.createAuditEvent({
+      asicId,
+      eventType: 'asic_updated',
+      description: 'ASIC assigned to client',
+      performedBy,
+      metadata: { clientId, action: 'assign' }
+    });
+    
+    await this.createClientAuditEvent({
+      clientId,
+      eventType: 'asic_assigned',
+      description: 'ASIC assigned to client',
+      performedBy,
+      metadata: { asicId }
+    });
+  }
+
+  static async unassignASICFromClient(asicId: string, performedBy: string): Promise<void> {
+    const asicDoc = await getDoc(doc(db, 'asics', asicId));
+    const asicData = asicDoc.data() as ASIC;
+    const clientId = asicData.clientId;
+    
+    await updateDoc(doc(db, 'asics', asicId), {
+      clientId: null,
+      updatedAt: serverTimestamp()
+    });
+    
+    // Update client's ASIC count and capacity
+    if (clientId) {
+      await this.updateClientStats(clientId);
+      
+      // Create audit events
+      await this.createClientAuditEvent({
+        clientId,
+        eventType: 'asic_removed',
+        description: 'ASIC removed from client',
+        performedBy,
+        metadata: { asicId }
+      });
+    }
+    
+    await this.createAuditEvent({
+      asicId,
+      eventType: 'asic_updated',
+      description: 'ASIC unassigned from client',
+      performedBy,
+      metadata: { clientId, action: 'unassign' }
+    });
+  }
+
+  // Update client statistics (ASIC count and mining capacity)
+  static async updateClientStats(clientId: string): Promise<void> {
+    const asics = await this.getASICsByClient(clientId);
+    const numberOfASICs = asics.length;
+    const miningCapacity = asics.reduce((sum, asic) => sum + asic.hashRate, 0);
+    
+    await updateDoc(doc(db, 'clients', clientId), {
+      numberOfASICs,
+      miningCapacity,
+      updatedAt: serverTimestamp()
+    });
+  }
+
   // Test queries to trigger automatic index creation
   // Run these in development to get Firebase index creation links
   static async triggerIndexCreation() {

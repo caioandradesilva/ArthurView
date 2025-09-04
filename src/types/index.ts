@@ -129,3 +129,37 @@ export interface UserSiteAccess {
   approvedAt: Date;
   createdAt: Date;
 }
+
+export interface Client {
+  id: string;
+  name: string;
+  location: string; // Where their ASICs are located
+  numberOfASICs: number; // Calculated field
+  miningCapacity: number; // Total TH/s - calculated field
+  clientSince: Date; // When they became our client
+  platformId: string; // Generated platform ID (e.g., CLT-001)
+  email?: string;
+  phone?: string;
+  contractDetails?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ClientComment {
+  id: string;
+  clientId: string;
+  message: string;
+  author: string;
+  createdAt: Date;
+}
+
+export interface ClientAuditEvent {
+  id: string;
+  clientId: string;
+  eventType: 'client_created' | 'client_updated' | 'asic_assigned' | 'asic_removed' | 'comment_added' | 'contract_updated';
+  description: string;
+  performedBy: string;
+  metadata?: Record<string, any>;
+  createdAt: Date;
+}

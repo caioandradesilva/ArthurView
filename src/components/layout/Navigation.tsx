@@ -12,6 +12,7 @@ const Navigation: React.FC = () => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Assets', href: '/assets', icon: Server },
     { name: 'Tickets', href: '/tickets', icon: Ticket },
+    { name: 'Host', href: '/host', icon: Users },
     { name: 'Search', href: '/search', icon: Search },
   ];
 

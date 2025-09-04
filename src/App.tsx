@@ -9,6 +9,8 @@ import TicketsPage from './pages/TicketsPage';
 import SearchPage from './pages/SearchPage';
 import ASICDetailsPage from './pages/ASICDetailsPage';
 import TicketDetailsPage from './pages/TicketDetailsPage';
+import HostPage from './pages/HostPage';
+import ClientDetailsPage from './pages/ClientDetailsPage';
 
 const AppContent: React.FC = () => {
   const { currentUser, loading } = useAuth();
@@ -39,6 +41,8 @@ const AppContent: React.FC = () => {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/asic/:id" element={<ASICDetailsPage />} />
             <Route path="/ticket/:id" element={<TicketDetailsPage />} />
+            <Route path="/host" element={<HostPage />} />
+            <Route path="/client/:id" element={<ClientDetailsPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
