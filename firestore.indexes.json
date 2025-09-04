@@ -109,6 +109,14 @@
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "siteId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "clientComments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
