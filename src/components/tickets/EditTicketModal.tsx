@@ -18,7 +18,7 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
     description: ticket.description,
     priority: ticket.priority,
     status: ticket.status,
-    assignedTo: ticket.assignedTo || ''
+    assignedTo: Array.isArray(ticket.assignedTo) ? ticket.assignedTo.join(', ') : (ticket.assignedTo || '')
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +30,7 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
         description: ticket.description,
         priority: ticket.priority,
         status: ticket.status,
-        assignedTo: ticket.assignedTo || ''
+        assignedTo: Array.isArray(ticket.assignedTo) ? ticket.assignedTo.join(', ') : (ticket.assignedTo || '')
       });
     }
   }, [isOpen, ticket]);
@@ -44,8 +44,11 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
 
     try {
       const updates: Partial<Ticket> = { ...formData };
-      if (!updates.assignedTo) {
+      if (!updates.assignedTo || updates.assignedTo.trim() === '') {
         updates.assignedTo = undefined;
+      } else {
+        // Convert string to array by splitting on comma and trimming whitespace
+        updates.assignedTo = updates.assignedTo.split(',').map(name => name.trim()).filter(name => name.length > 0);
       }
       
       await FirestoreService.updateTicket(ticket.id, updates, userProfile.name);

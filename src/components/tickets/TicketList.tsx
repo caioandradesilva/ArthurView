@@ -103,7 +103,7 @@ const TicketList: React.FC<TicketListProps> = ({ tickets, asicsMap, loading }) =
               {ticket.assignedTo && ticket.assignedTo.length > 0 && (
                 <div className="flex items-center space-x-1">
                   <User className="h-4 w-4" />
-                  <span>Assigned: {ticket.assignedTo.join(', ')}</span>
+                  <span>Assigned: {Array.isArray(ticket.assignedTo) ? ticket.assignedTo.join(', ') : ticket.assignedTo}</span>
                 </div>
               )}
             </div>

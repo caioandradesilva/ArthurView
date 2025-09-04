@@ -211,7 +211,6 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         siteId: siteId,
         createdBy: userProfile.name,
         createdBySiteId: siteId,
-        assignedTo: [],
         estimatedCost: 0,
         costCurrency: 'USD',
         isUrgent: false,
