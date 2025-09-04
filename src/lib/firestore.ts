@@ -515,7 +515,46 @@ export class FirestoreService {
   }
 
   static async getUnassignedASICs(): Promise<ASIC[]> {
-    const q = query(collection(db, 'asics'), where('clientId', '==', null));
+    // Query for ASICs where clientId field doesn't exist or is null/undefined
+    const q1 = query(collection(db, 'asics'), where('clientId', '==', null));
+    const q2 = query(collection(db, 'asics'));
+    
+    const [snapshot1, snapshot2] = await Promise.all([
+      getDocs(q1),
+      getDocs(q2)
+    ]);
+    
+    const results: ASIC[] = [];
+    
+    // Add ASICs with clientId === null
+    snapshot1.docs.forEach(doc => {
+      const data = doc.data();
+      results.push({ 
+        id: doc.id, 
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        lastSeen: data.lastSeen?.toDate?.() || data.lastSeen,
+        maintenanceSchedule: data.maintenanceSchedule?.toDate?.() || data.maintenanceSchedule
+      } as ASIC);
+    });
+    
+    // Add ASICs without clientId field
+    snapshot2.docs.forEach(doc => {
+      const data = doc.data();
+      if (!data.hasOwnProperty('clientId') && !results.some(r => r.id === doc.id)) {
+        results.push({ 
+          id: doc.id, 
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+          lastSeen: data.lastSeen?.toDate?.() || data.lastSeen,
+          maintenanceSchedule: data.maintenanceSchedule?.toDate?.() || data.maintenanceSchedule
+        } as ASIC);
+      }
+    });
+    
+    return results;
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
