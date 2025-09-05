@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Breadcrumb from '../components/ui/Breadcrumb';
 import AssetHierarchy from '../components/assets/AssetHierarchy';
 import CreateSiteModal from '../components/assets/CreateSiteModal';
@@ -26,7 +27,15 @@ const AssetsPage: React.FC = () => {
           <p className="text-gray-600 mt-2">Manage your mining infrastructure hierarchy</p>
         </div>
         
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+          <Link
+            to="/bulk-import"
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Upload className="h-4 w-4" />
+            <span>Bulk Import</span>
+          </Link>
+          
           <div className="relative">
             <select
               className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"

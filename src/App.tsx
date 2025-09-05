@@ -11,6 +11,7 @@ import ASICDetailsPage from './pages/ASICDetailsPage';
 import TicketDetailsPage from './pages/TicketDetailsPage';
 import HostPage from './pages/HostPage';
 import ClientDetailsPage from './pages/ClientDetailsPage';
+import BulkImportPage from './pages/BulkImportPage';
 
 const AppContent: React.FC = () => {
   const { currentUser, loading } = useAuth();
@@ -43,6 +44,7 @@ const AppContent: React.FC = () => {
             <Route path="/ticket/:id" element={<TicketDetailsPage />} />
             <Route path="/host" element={<HostPage />} />
             <Route path="/client/:id" element={<ClientDetailsPage />} />
+            <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

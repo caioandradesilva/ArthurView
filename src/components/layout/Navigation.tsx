@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Search, Home, Server, Ticket, Users, Settings } from 'lucide-react';
+import { Menu, X, Search, Home, Server, Ticket, Users, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Navigation: React.FC = () => {
@@ -11,6 +11,7 @@ const Navigation: React.FC = () => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Assets', href: '/assets', icon: Server },
+    { name: 'Bulk Import', href: '/bulk-import', icon: Upload },
     { name: 'Tickets', href: '/tickets', icon: Ticket },
     { name: 'Host', href: '/host', icon: Users },
     { name: 'Search', href: '/search', icon: Search },
