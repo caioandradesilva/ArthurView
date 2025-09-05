@@ -52,6 +52,8 @@ const AssetHierarchy: React.FC = () => {
     setLoadingNodes(prev => new Set(prev).add(siteId));
     try {
       const containers = await FirestoreService.getContainersBySite(siteId);
+      // Sort containers by name in ascending order
+      containers.sort((a, b) => a.name.localeCompare(b.name));
       setData(prev => ({
         ...prev,
         containers: { ...prev.containers, [siteId]: containers }
@@ -73,6 +75,8 @@ const AssetHierarchy: React.FC = () => {
     setLoadingNodes(prev => new Set(prev).add(containerId));
     try {
       const racks = await FirestoreService.getRacksByContainer(containerId);
+      // Sort racks by name in ascending order
+      racks.sort((a, b) => a.name.localeCompare(b.name));
       setData(prev => ({
         ...prev,
         racks: { ...prev.racks, [containerId]: racks }
@@ -94,6 +98,13 @@ const AssetHierarchy: React.FC = () => {
     setLoadingNodes(prev => new Set(prev).add(rackId));
     try {
       const asics = await FirestoreService.getASICsByRack(rackId);
+      // Sort ASICs by position (line first, then column)
+      asics.sort((a, b) => {
+        if (a.position.line !== b.position.line) {
+          return a.position.line - b.position.line;
+        }
+        return a.position.column - b.position.column;
+      });
       setData(prev => ({
         ...prev,
         asics: { ...prev.asics, [rackId]: asics }

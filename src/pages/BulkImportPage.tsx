@@ -294,6 +294,22 @@ const BulkImportPage: React.FC = () => {
         }
       }
 
+      
+      // Show success confirmation popup
+      if (result.successfulImports > 0) {
+        alert(`✅ Importação concluída com sucesso!\n\n` +
+              `📊 Resumo:\n` +
+              `• ${result.successfulImports} ASICs importados\n` +
+              `• ${result.created.sites} sites criados\n` +
+              `• ${result.created.containers} containers criados\n` +
+              `• ${result.created.racks} racks criados\n` +
+              `• ${result.created.asics} ASICs criados\n\n` +
+              `${result.failedImports > 0 ? `⚠️ ${result.failedImports} falhas encontradas. Verifique os detalhes abaixo.` : '🎉 Todos os dados foram importados sem erros!'}`);
+      } else if (result.failedImports > 0) {
+        alert(`❌ Falha na importação!\n\n` +
+              `${result.failedImports} linhas falharam na importação.\n` +
+              `Verifique os erros detalhados abaixo e corrija o arquivo CSV.`);
+      }
     } catch (error: any) {
       result.errors.push({
         row: 0,
