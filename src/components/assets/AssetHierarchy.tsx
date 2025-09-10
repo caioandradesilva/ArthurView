@@ -188,7 +188,19 @@ const AssetHierarchy: React.FC = () => {
         code: error.code,
         stack: error.stack
       });
-      alert(`Error deleting asset: ${error.message || 'Unknown error'}. Please try again.`);
+      // Handle specific Firebase errors
+      let errorMessage = 'Unknown error';
+      if (error.code === 'permission-denied') {
+        errorMessage = 'Firebase quota exceeded or insufficient permissions. Please check your Firebase usage limits or try again later.';
+      } else if (error.code === 'quota-exceeded') {
+        errorMessage = 'Firebase quota exceeded. Please upgrade your Firebase plan or try again later.';
+      } else if (error.code === 'resource-exhausted') {
+        errorMessage = 'Firebase resources exhausted. Please try again later or upgrade your plan.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Error deleting asset: ${errorMessage}`);
     }
   };
 
