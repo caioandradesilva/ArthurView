@@ -872,4 +872,88 @@ export class FirestoreService {
       updatedAt: serverTimestamp()
     });
   }
+
+  // Delete operations with hierarchy
+  static async deleteSite(siteId: string): Promise<void> {
+    // Get all containers in this site
+    const containers = await this.getContainersBySite(siteId);
+    
+    // Delete all containers (which will cascade delete racks and ASICs)
+    for (const container of containers) {
+      await this.deleteContainer(container.id);
+    }
+    
+    // Delete the site itself
+    await deleteDoc(doc(db, 'sites', siteId));
+  }
+
+  static async deleteContainer(containerId: string): Promise<void> {
+    // Get all racks in this container
+    const racks = await this.getRacksByContainer(containerId);
+    
+    // Delete all racks (which will cascade delete ASICs)
+    for (const rack of racks) {
+      await this.deleteRack(rack.id);
+    }
+    
+    // Delete the container itself
+    await deleteDoc(doc(db, 'containers', containerId));
+  }
+
+  static async deleteRack(rackId: string): Promise<void> {
+    // Get all ASICs in this rack
+    const asics = await this.getASICsByRack(rackId);
+    
+    // Delete all ASICs
+    for (const asic of asics) {
+      await this.deleteASIC(asic.id);
+    }
+    
+    // Delete the rack itself
+    await deleteDoc(doc(db, 'racks', rackId));
+  }
+
+  static async deleteASIC(asicId: string): Promise<void> {
+    // Get all tickets for this ASIC
+    const tickets = await this.getTicketsByASIC(asicId);
+    
+    // Delete all related data
+    for (const ticket of tickets) {
+      // Delete ticket comments
+      const ticketComments = await this.getCommentsByTicket(ticket.id);
+      for (const comment of ticketComments) {
+        await deleteDoc(doc(db, 'comments', comment.id));
+      }
+      
+      // Delete ticket costs
+      const ticketCosts = await this.getCostsByTicket(ticket.id);
+      for (const cost of ticketCosts) {
+        await deleteDoc(doc(db, 'costs', cost.id));
+      }
+      
+      // Delete the ticket
+      await deleteDoc(doc(db, 'tickets', ticket.id));
+    }
+    
+    // Delete ASIC comments
+    const asicComments = await this.getCommentsByASIC(asicId);
+    for (const comment of asicComments) {
+      await deleteDoc(doc(db, 'comments', comment.id));
+    }
+    
+    // Delete ASIC costs
+    const asicCosts = await this.getCostsByASIC(asicId);
+    for (const cost of asicCosts) {
+      await deleteDoc(doc(db, 'costs', cost.id));
+    }
+    
+    // Delete audit events
+    const auditEvents = await this.getAuditEventsByASIC(asicId);
+    for (const event of auditEvents) {
+      await deleteDoc(doc(db, 'auditEvents', event.id));
+    }
+    
+    // Delete the ASIC itself
+    await deleteDoc(doc(db, 'asics', asicId));
+  }
 }

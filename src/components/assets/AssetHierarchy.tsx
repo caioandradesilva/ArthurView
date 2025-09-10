@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, MapPin, Package, Server, Cpu, Edit } from 'lucide-react';
+import { ChevronRight, ChevronDown, MapPin, Package, Server, Cpu, Edit, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FirestoreService } from '../../lib/firestore';
 import type { Site, Container, Rack, ASIC } from '../../types';
@@ -8,6 +8,7 @@ import EditSiteModal from './EditSiteModal';
 import EditContainerModal from './EditContainerModal';
 import EditRackModal from './EditRackModal';
 import EditASICModal from '../asic/EditASICModal';
+import DeleteConfirmModal from './DeleteConfirmModal';
 
 interface HierarchyData {
   sites: Site[];
@@ -27,6 +28,10 @@ const AssetHierarchy: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
   const [editModal, setEditModal] = useState<{
+    type: 'site' | 'container' | 'rack' | 'asic' | null;
+    item: Site | Container | Rack | ASIC | null;
+  }>({ type: null, item: null });
+  const [deleteModal, setDeleteModal] = useState<{
     type: 'site' | 'container' | 'rack' | 'asic' | null;
     item: Site | Container | Rack | ASIC | null;
   }>({ type: null, item: null });
@@ -143,6 +148,32 @@ const AssetHierarchy: React.FC = () => {
     setExpandedNodes(newExpanded);
   };
 
+  const handleDelete = async (type: 'site' | 'container' | 'rack' | 'asic', id: string) => {
+    try {
+      switch (type) {
+        case 'site':
+          await FirestoreService.deleteSite(id);
+          break;
+        case 'container':
+          await FirestoreService.deleteContainer(id);
+          break;
+        case 'rack':
+          await FirestoreService.deleteRack(id);
+          break;
+        case 'asic':
+          await FirestoreService.deleteASIC(id);
+          break;
+      }
+      
+      // Refresh the data
+      loadSites();
+      setDeleteModal({ type: null, item: null });
+    } catch (error) {
+      console.error('Error deleting asset:', error);
+      alert('Error deleting asset. Please try again.');
+    }
+  };
+
   const getNodeIcon = (type: 'site' | 'container' | 'rack' | 'asic') => {
     const iconProps = { className: "h-4 w-4" };
     
@@ -196,6 +227,16 @@ const AssetHierarchy: React.FC = () => {
             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
           >
             <Edit className="h-3 w-3 text-gray-500" />
+          </button>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteModal({ type: 'site', item: site });
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity"
+          >
+            <Trash2 className="h-3 w-3 text-red-500" />
           </button>
           
           <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -254,6 +295,16 @@ const AssetHierarchy: React.FC = () => {
           >
             <Edit className="h-3 w-3 text-gray-500" />
           </button>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteModal({ type: 'container', item: container });
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity"
+          >
+            <Trash2 className="h-3 w-3 text-red-500" />
+          </button>
         </div>
         
         {isExpanded && (
@@ -307,6 +358,16 @@ const AssetHierarchy: React.FC = () => {
           >
             <Edit className="h-3 w-3 text-gray-500" />
           </button>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteModal({ type: 'rack', item: rack });
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity"
+          >
+            <Trash2 className="h-3 w-3 text-red-500" />
+          </button>
         </div>
         
         {isExpanded && (
@@ -347,6 +408,16 @@ const AssetHierarchy: React.FC = () => {
             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity mr-2"
           >
             <Edit className="h-3 w-3 text-gray-500" />
+          </button>
+          
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteModal({ type: 'asic', item: asic });
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity mr-2"
+          >
+            <Trash2 className="h-3 w-3 text-red-500" />
           </button>
           
           <div className="text-right">
@@ -446,6 +517,22 @@ const AssetHierarchy: React.FC = () => {
             const asic = editModal.item as ASIC;
             loadASICs(asic.rackId);
           }}
+        />
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {deleteModal.type && deleteModal.item && (
+        <DeleteConfirmModal
+          isOpen={true}
+          onClose={() => setDeleteModal({ type: null, item: null })}
+          onConfirm={() => handleDelete(deleteModal.type!, deleteModal.item!.id)}
+          assetType={deleteModal.type}
+          assetName={
+            deleteModal.type === 'site' ? (deleteModal.item as Site).name :
+            deleteModal.type === 'container' ? (deleteModal.item as Container).name :
+            deleteModal.type === 'rack' ? (deleteModal.item as Rack).name :
+            (deleteModal.item as ASIC).macAddress || (deleteModal.item as ASIC).serialNumber
+          }
         />
       )}
     </div>
