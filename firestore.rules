@@ -172,3 +172,36 @@ service cloud.firestore {
     }
   }
 }
+  // Sites collection
+  match /sites/{siteId} {
+    allow read: if isAuthenticated() && hasAccessToSite(siteId);
+    allow write: if isAdmin() || isOperator();
+    allow delete: if isAdmin();
+  }
+  
+  // Containers collection
+  match /containers/{containerId} {
+    allow read: if isAuthenticated() && hasAccessToSite(resource.data.siteId);
+    allow write: if isAdmin() || isOperator();
+    allow delete: if isAdmin();
+  }
+  
+  // Racks collection
+  match /racks/{rackId} {
+    allow read: if isAuthenticated() && hasAccessToSite(resource.data.siteId);
+    allow write: if isAdmin() || isOperator();
+    allow delete: if isAdmin();
+  }
+  
+  // ASICs collection
+  match /asics/{asicId} {
+    allow read: if isAuthenticated() && (
+      hasAccessToSite(resource.data.siteId) ||
+      (isClient() && resource.data.clientId == request.auth.uid)
+    );
+    
+    allow write: if (isAdmin() || isOperator()) && 
+                    hasAccessToSite(resource.data.siteId);
+    allow delete: if isAdmin();
+  }
+  
