@@ -75,10 +75,19 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Check Your Email</h3>
                 <p className="text-gray-600 mb-4">
-                  We've sent a password reset link to <strong>{email}</strong>
+                  If an account with <strong>{email}</strong> exists, we've sent a password reset link to that address.
                 </p>
-                <p className="text-sm text-gray-500">
-                  If you don't see the email, check your spam folder or try again with a different email address.
+                <p className="text-sm text-gray-500 mb-4">
+                  If you don't see the email within a few minutes, please check your spam folder.
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-left">
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">Important Notes:</h4>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>• Only registered email addresses will receive the reset link</li>
+                    <li>• Check your spam/junk folder if you don't see the email</li>
+                    <li>• The reset link expires after 1 hour</li>
+                    <li>• Contact your administrator if you're unsure about your email address</li>
+                  </ul>
                 </p>
               </div>
               <button
