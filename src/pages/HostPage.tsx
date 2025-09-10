@@ -10,6 +10,8 @@ const HostPage: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -29,8 +31,10 @@ const HostPage: React.FC = () => {
   const loadClients = async () => {
     setLoading(true);
     try {
-      const clientsData = await FirestoreService.getAllClients();
+      // Load first page of clients
+      const clientsData = await FirestoreService.getClientsPaginated(20);
       setClients(clientsData);
+      setHasMore(clientsData.length === 20);
     } catch (error) {
       console.error('Error loading clients:', error);
       setClients([]);
@@ -39,6 +43,26 @@ const HostPage: React.FC = () => {
     }
   };
 
+  const loadMoreClients = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    setLoadingMore(true);
+    try {
+      const lastClient = clients[clients.length - 1];
+      const moreClients = await FirestoreService.getClientsPaginated(20, lastClient);
+      
+      if (moreClients.length > 0) {
+        setClients(prev => [...prev, ...moreClients]);
+        setHasMore(moreClients.length === 20);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error loading more clients:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
   const applyFilters = () => {
     let filtered = [...clients];
 
@@ -314,6 +338,18 @@ const HostPage: React.FC = () => {
           </div>
         )}
       </div>
+        {/* Load More Button */}
+        {hasMore && !loading && filteredClients.length === clients.length && (
+          <div className="p-6 border-t border-gray-200 text-center">
+            <button
+              onClick={loadMoreClients}
+              disabled={loadingMore}
+              className="px-6 py-3 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loadingMore ? 'Loading...' : 'Load More Clients'}
+            </button>
+          </div>
+        )}
 
       <CreateClientModal
         isOpen={isCreateModalOpen}

@@ -16,8 +16,9 @@ import {
   DocumentData,
   QueryConstraint
 } from 'firebase/firestore';
+import { startAfter } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Site, Container, Rack, ASIC, Ticket, Comment, CostRecord, AuditEvent } from '../types';
+import type { Site, Container, Rack, ASIC, Ticket, Comment, CostRecord, AuditEvent, Client, ClientComment, ClientAuditEvent } from '../types';
 
 // Generic Firestore operations
 export class FirestoreService {
@@ -721,23 +722,145 @@ export class FirestoreService {
     }
   }
 
+  // Optimized dashboard statistics - single query approach
+  static async getDashboardStats(): Promise<{
+    totalASICs: number;
+    onlineASICs: number;
+    offlineASICs: number;
+    maintenanceASICs: number;
+    errorASICs: number;
+    openTickets: number;
+    totalSites: number;
+  }> {
+    try {
+      // Use Promise.all to run queries in parallel
+      const [sitesSnapshot, asicsSnapshot, ticketsSnapshot] = await Promise.all([
+        getDocs(collection(db, 'sites')),
+        getDocs(collection(db, 'asics')),
+        getDocs(query(collection(db, 'tickets'), where('status', 'in', ['open', 'in_progress'])))
+      ]);
+
+      // Calculate ASIC statistics
+      let onlineASICs = 0;
+      let offlineASICs = 0;
+      let maintenanceASICs = 0;
+      let errorASICs = 0;
+
+      asicsSnapshot.docs.forEach(doc => {
+        const asic = doc.data();
+        switch (asic.status) {
+          case 'online':
+            onlineASICs++;
+            break;
+          case 'offline':
+            offlineASICs++;
+            break;
+          case 'maintenance':
+            maintenanceASICs++;
+            break;
+          case 'error':
+            errorASICs++;
+            break;
+        }
+      });
+
+      return {
+        totalASICs: asicsSnapshot.size,
+        onlineASICs,
+        offlineASICs,
+        maintenanceASICs,
+        errorASICs,
+        openTickets: ticketsSnapshot.size,
+        totalSites: sitesSnapshot.size
+      };
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      return {
+        totalASICs: 0,
+        onlineASICs: 0,
+        offlineASICs: 0,
+        maintenanceASICs: 0,
+        errorASICs: 0,
+        openTickets: 0,
+        totalSites: 0
+      };
+    }
+  }
+
+  // Paginated tickets
+  static async getTicketsPaginated(pageSize: number = 20, lastTicket?: Ticket): Promise<Ticket[]> {
+    try {
+      let q = query(
+        collection(db, 'tickets'), 
+        orderBy('createdAt', 'desc'),
+        limit(pageSize)
+      );
+
+      if (lastTicket && lastTicket.createdAt) {
+        q = query(
+          collection(db, 'tickets'), 
+          orderBy('createdAt', 'desc'),
+          startAfter(lastTicket.createdAt),
+          limit(pageSize)
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ticket));
+    } catch (error) {
+      console.error('Error fetching paginated tickets:', error);
+      return [];
+    }
+  }
+
+  // Paginated clients
+  static async getClientsPaginated(pageSize: number = 20, lastClient?: Client): Promise<Client[]> {
+    try {
+      let q = query(
+        collection(db, 'clients'), 
+        orderBy('createdAt', 'desc'),
+        limit(pageSize)
+      );
+
+      if (lastClient && lastClient.createdAt) {
+        q = query(
+          collection(db, 'clients'), 
+          orderBy('createdAt', 'desc'),
+          startAfter(lastClient.createdAt),
+          limit(pageSize)
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data,
+          clientSince: data.clientSince?.toDate?.() || data.clientSince,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+        } as Client;
+      });
+    } catch (error) {
+      console.error('Error fetching paginated clients:', error);
+      return [];
+    }
+  }
+
   // Search functionality
   static async searchASICs(searchTerm: string): Promise<ASIC[]> {
-    // Enhanced search implementation with case-insensitive and partial matching
-    const results: ASIC[] = [];
-    const searchLower = searchTerm.toLowerCase();
-    const searchUpper = searchTerm.toUpperCase();
-    
-    // If search term is 4 characters or less, also search for it as last 4 digits of MAC
-    const isShortSearch = searchTerm.length <= 4;
-
+    // Optimized search - limit initial query size and use targeted queries
     try {
-      // Get all ASICs and perform client-side filtering for better search capabilities
-      // Note: In production with large datasets, consider implementing server-side search
-      const allASICsQuery = query(collection(db, 'asics'), limit(1000));
-      const allASICsSnapshot = await getDocs(allASICsQuery);
+      const results: ASIC[] = [];
+      const searchLower = searchTerm.toLowerCase();
+      const searchUpper = searchTerm.toUpperCase();
       
-      allASICsSnapshot.docs.forEach(doc => {
+      // Limit search to 100 results to reduce reads
+      const searchQuery = query(collection(db, 'asics'), limit(100));
+      const searchSnapshot = await getDocs(searchQuery);
+      
+      searchSnapshot.docs.forEach(doc => {
         const asic = { id: doc.id, ...doc.data() } as ASIC;
         let isMatch = false;
         
@@ -751,8 +874,8 @@ export class FirestoreService {
           if (fieldLower.includes(searchLower)) return true;
           if (fieldUpper.includes(searchUpper)) return true;
           
-          // For MAC addresses, also check last 4 characters if search is short
-          if (isShortSearch && field.length >= 4) {
+          // For MAC addresses, also check last 4 characters if search is 4 chars or less
+          if (searchTerm.length <= 4 && field.length >= 4) {
             const last4 = field.slice(-4).toLowerCase();
             if (last4 === searchLower) return true;
             
@@ -816,14 +939,14 @@ export class FirestoreService {
       console.error('Error searching ASICs:', error);
     }
 
-    // Sort results by relevance (exact matches first, then partial matches)
+    // Sort and limit results
     const sortedResults = results.sort((a, b) => {
       const aScore = this.calculateSearchScore(a, searchTerm);
       const bScore = this.calculateSearchScore(b, searchTerm);
       return bScore - aScore; // Higher score first
     });
 
-    return sortedResults.slice(0, 50); // Limit to 50 results
+    return sortedResults.slice(0, 20); // Limit to 20 results to reduce UI load
   }
   
   // Helper method to calculate search relevance score

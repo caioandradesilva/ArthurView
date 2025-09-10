@@ -3,7 +3,7 @@ import { Server, Ticket, DollarSign, Activity, TrendingUp, AlertTriangle, Plus }
 import { Link } from 'react-router-dom';
 import { FirestoreService } from '../../lib/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Site, ASIC, Ticket as TicketType } from '../../types';
+import type { Ticket as TicketType } from '../../types';
 
 interface DashboardStats {
   totalASICs: number;
@@ -39,46 +39,13 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       
-      // Load sites
-      const sites = await FirestoreService.getSites();
-      
-      // Load all ASICs from all sites
-      let allASICs: ASIC[] = [];
-      for (const site of sites) {
-        const containers = await FirestoreService.getContainersBySite(site.id);
-        for (const container of containers) {
-          const racks = await FirestoreService.getRacksByContainer(container.id);
-          for (const rack of racks) {
-            const asics = await FirestoreService.getASICsByRack(rack.id);
-            allASICs = [...allASICs, ...asics];
-          }
-        }
-      }
+      // Use optimized dashboard stats query
+      const dashboardStats = await FirestoreService.getDashboardStats();
+      setStats(dashboardStats);
 
-      // Calculate ASIC stats
-      const onlineASICs = allASICs.filter(asic => asic.status === 'online').length;
-      const offlineASICs = allASICs.filter(asic => asic.status === 'offline').length;
-      const maintenanceASICs = allASICs.filter(asic => asic.status === 'maintenance').length;
-      const errorASICs = allASICs.filter(asic => asic.status === 'error').length;
-
-      // Load recent tickets
-      const tickets = await FirestoreService.getAllTickets();
-      const openTickets = tickets.filter(ticket => 
-        ticket.status === 'open' || ticket.status === 'in_progress'
-      ).length;
-
-      setStats({
-        totalASICs: allASICs.length,
-        onlineASICs,
-        offlineASICs,
-        maintenanceASICs,
-        errorASICs,
-        openTickets,
-        totalSites: sites.length
-      });
-
-      // Set recent tickets (last 5)
-      setRecentTickets(tickets.slice(0, 5));
+      // Load only recent tickets (paginated)
+      const recentTicketsData = await FirestoreService.getTicketsPaginated(5);
+      setRecentTickets(recentTicketsData);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);

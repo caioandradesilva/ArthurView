@@ -14,6 +14,8 @@ const TicketsPage: React.FC = () => {
   const [filteredTickets, setFilteredTickets] = useState<Ticket[]>([]);
   const [asicsMap, setAsicsMap] = useState<{ [key: string]: ASIC }>({});
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -37,8 +39,10 @@ const TicketsPage: React.FC = () => {
   const loadTickets = async () => {
     setLoading(true);
     try {
-      const ticketsData = await FirestoreService.getAllTickets();
+      // Load first page of tickets
+      const ticketsData = await FirestoreService.getTicketsPaginated(20);
       setTickets(ticketsData);
+      setHasMore(ticketsData.length === 20);
       
       // Load ASIC data for all tickets
       const asicIds = [...new Set(ticketsData.map(t => t.asicId).filter(Boolean))];
@@ -64,6 +68,45 @@ const TicketsPage: React.FC = () => {
     }
   };
 
+  const loadMoreTickets = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    setLoadingMore(true);
+    try {
+      const lastTicket = tickets[tickets.length - 1];
+      const moreTickets = await FirestoreService.getTicketsPaginated(20, lastTicket);
+      
+      if (moreTickets.length > 0) {
+        setTickets(prev => [...prev, ...moreTickets]);
+        setHasMore(moreTickets.length === 20);
+        
+        // Load ASIC data for new tickets
+        const newAsicIds = [...new Set(moreTickets.map(t => t.asicId).filter(Boolean))];
+        const newAsicsData: { [key: string]: ASIC } = {};
+        
+        for (const asicId of newAsicIds) {
+          if (!asicsMap[asicId]) {
+            try {
+              const asic = await FirestoreService.getASICById(asicId);
+              if (asic) {
+                newAsicsData[asicId] = asic;
+              }
+            } catch (error) {
+              console.error(`Error loading ASIC ${asicId}:`, error);
+            }
+          }
+        }
+        
+        setAsicsMap(prev => ({ ...prev, ...newAsicsData }));
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Error loading more tickets:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
   const applyFilters = () => {
     let filtered = [...tickets];
 
@@ -208,7 +251,22 @@ const TicketsPage: React.FC = () => {
         )}
       </div>
       
-      <TicketList tickets={filteredTickets} asicsMap={asicsMap} loading={loading} />
+      <div>
+        <TicketList tickets={filteredTickets} asicsMap={asicsMap} loading={loading} />
+        
+        {/* Load More Button */}
+        {hasMore && !loading && filteredTickets.length === tickets.length && (
+          <div className="mt-6 text-center">
+            <button
+              onClick={loadMoreTickets}
+              disabled={loadingMore}
+              className="px-6 py-3 bg-primary-500 text-dark-900 rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loadingMore ? 'Loading...' : 'Load More Tickets'}
+            </button>
+          </div>
+        )}
+      </div>
 
       <CreateTicketModal
         isOpen={isCreateModalOpen}
