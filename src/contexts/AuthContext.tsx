@@ -40,13 +40,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(user);
       
       if (user) {
+        console.log('Current User UID:', user.uid);
         // Fetch user profile from Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const profile = { id: userDoc.id, ...userDoc.data() } as User;
+            console.log('User Profile:', profile);
             setUserProfile(profile);
           } else {
+            console.log('No user document found for UID:', user.uid);
             setUserProfile(null);
           }
         } catch (error) {

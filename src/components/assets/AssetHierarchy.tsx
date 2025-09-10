@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, MapPin, Package, Server, Cpu, Edit, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FirestoreService } from '../../lib/firestore';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Site, Container, Rack, ASIC } from '../../types';
 import StatusBadge from '../ui/StatusBadge';
 import EditSiteModal from './EditSiteModal';
@@ -18,6 +19,7 @@ interface HierarchyData {
 }
 
 const AssetHierarchy: React.FC = () => {
+  const { userProfile } = useAuth();
   const [data, setData] = useState<HierarchyData>({
     sites: [],
     containers: {},
@@ -150,6 +152,15 @@ const AssetHierarchy: React.FC = () => {
 
   const handleDelete = async (type: 'site' | 'container' | 'rack' | 'asic', id: string) => {
     try {
+      console.log('Attempting to delete:', type, id);
+      console.log('Current user profile:', userProfile);
+      console.log('User role:', userProfile?.role);
+      
+      if (!userProfile || userProfile.role !== 'admin') {
+        alert('You must be an admin to delete assets. Current role: ' + (userProfile?.role || 'none'));
+        return;
+      }
+      
       switch (type) {
         case 'site':
           await FirestoreService.deleteSite(id);
