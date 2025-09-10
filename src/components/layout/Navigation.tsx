@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Search, Home, Server, Ticket, Users, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import UserProfileModal from '../auth/UserProfileModal';
 
 const Navigation: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
   const location = useLocation();
   const { logout, userProfile } = useAuth();
 
@@ -88,7 +90,13 @@ const Navigation: React.FC = () => {
               })}
 
               <div className="mt-8 pt-6 border-t border-dark-700">
-                <div className="flex items-center space-x-3 px-3 py-2 mb-4">
+                <button
+                  onClick={() => {
+                    setShowUserProfile(true);
+                    setIsOpen(false);
+                  }}
+                  className="flex items-center space-x-3 px-3 py-2 mb-4 w-full text-left hover:bg-dark-800 rounded-lg transition-colors"
+                >
                   <div className="w-8 h-8 bg-dark-700 rounded-full flex items-center justify-center">
                     <span className="text-sm font-medium text-white">
                       {userProfile?.name?.charAt(0) || 'U'}
@@ -98,7 +106,7 @@ const Navigation: React.FC = () => {
                     <p className="text-sm font-medium text-white">{userProfile?.name}</p>
                     <p className="text-xs text-gray-400">{userProfile?.email}</p>
                   </div>
-                </div>
+                </button>
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-dark-800 rounded-lg transition-colors"
@@ -144,7 +152,10 @@ const Navigation: React.FC = () => {
           </nav>
 
           <div className="p-4 border-t border-dark-700">
-            <div className="flex items-center space-x-3 mb-4">
+            <button
+              onClick={() => setShowUserProfile(true)}
+              className="flex items-center space-x-3 mb-4 w-full text-left hover:bg-dark-800 rounded-lg p-2 transition-colors"
+            >
               <div className="w-10 h-10 bg-dark-700 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-white">
                   {userProfile?.name?.charAt(0) || 'U'}
@@ -154,7 +165,7 @@ const Navigation: React.FC = () => {
                 <p className="text-sm font-medium text-white">{userProfile?.name}</p>
                 <p className="text-xs text-gray-400">{userProfile?.email}</p>
               </div>
-            </div>
+            </button>
             <button
               onClick={handleLogout}
               className="w-full text-left px-3 py-2 text-gray-300 hover:text-white hover:bg-dark-800 rounded-lg transition-colors"
@@ -164,6 +175,11 @@ const Navigation: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <UserProfileModal
+        isOpen={showUserProfile}
+        onClose={() => setShowUserProfile(false)}
+      />
     </>
   );
 };

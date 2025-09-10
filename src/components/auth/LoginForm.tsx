@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Server, AlertCircle } from 'lucide-react';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,11 +100,26 @@ const LoginForm: React.FC = () => {
           </div>
 
           <div className="text-center">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-sm text-primary-400 hover:text-primary-300 transition-colors"
+            >
+              Forgot your password?
+            </button>
+          </div>
+
+          <div className="text-center">
             <p className="text-xs text-gray-400">
               Secure access for mining operations personnel only
             </p>
           </div>
         </form>
+
+        <ForgotPasswordModal
+          isOpen={showForgotPassword}
+          onClose={() => setShowForgotPassword(false)}
+        />
       </div>
     </div>
   );
