@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw } from 'lucide-react';
+import { Plus, Search, Ticket as TicketIcon, User, Clock, ArrowRight, Cpu, RefreshCw, UserCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import TicketList from '../components/tickets/TicketList';
 import CreateTicketModal from '../components/tickets/CreateTicketModal';
@@ -18,6 +18,7 @@ const TicketsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [showMyTickets, setShowMyTickets] = useState(false);
 
   const breadcrumbItems = [
     { label: 'Tickets' }
@@ -31,7 +32,7 @@ const TicketsPage: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [tickets, searchTerm, statusFilter, priorityFilter]);
+  }, [tickets, searchTerm, statusFilter, priorityFilter, showMyTickets]);
 
   const loadTickets = async () => {
     setLoading(true);
@@ -65,6 +66,17 @@ const TicketsPage: React.FC = () => {
 
   const applyFilters = () => {
     let filtered = [...tickets];
+
+    // Apply "My Tickets" filter first
+    if (showMyTickets && userProfile) {
+      filtered = filtered.filter(ticket => 
+        ticket.createdBy === userProfile.name ||
+        (ticket.assignedTo && (
+          (Array.isArray(ticket.assignedTo) && ticket.assignedTo.includes(userProfile.name)) ||
+          (typeof ticket.assignedTo === 'string' && ticket.assignedTo === userProfile.name)
+        ))
+      );
+    }
 
     // Apply search filter
     if (searchTerm.trim()) {
@@ -115,7 +127,7 @@ const TicketsPage: React.FC = () => {
       
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -157,19 +169,36 @@ const TicketsPage: React.FC = () => {
               <option value="high">High</option>
             </select>
           </div>
+
+          {/* My Tickets Filter */}
+          <div>
+            <button
+              onClick={() => setShowMyTickets(!showMyTickets)}
+              className={`w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg border transition-colors ${
+                showMyTickets
+                  ? 'bg-primary-500 text-dark-900 border-primary-500'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <UserCheck className="h-4 w-4" />
+              <span>My Tickets</span>
+            </button>
+          </div>
         </div>
         
         {/* Filter Results Summary */}
-        {(searchTerm || statusFilter !== 'all' || priorityFilter !== 'all') && (
+        {(searchTerm || statusFilter !== 'all' || priorityFilter !== 'all' || showMyTickets) && (
           <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
             <span>
               Showing {filteredTickets.length} of {tickets.length} tickets
+              {showMyTickets && ' (filtered to your tickets)'}
             </span>
             <button
               onClick={() => {
                 setSearchTerm('');
                 setStatusFilter('all');
                 setPriorityFilter('all');
+                setShowMyTickets(false);
               }}
               className="text-primary-600 hover:text-primary-700 font-medium"
             >

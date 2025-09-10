@@ -15,16 +15,16 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
       error: { bg: 'bg-dark-100', text: 'text-dark-800', label: 'Error' },
       
       // Ticket Status
-      open: { bg: 'bg-primary-100', text: 'text-primary-800', label: 'Open' },
-      in_progress: { bg: 'bg-dark-100', text: 'text-dark-800', label: 'In Progress' },
+      open: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Open' },
+      in_progress: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'In Progress' },
       waiting_parts: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Waiting Parts' },
-      resolved: { bg: 'bg-primary-200', text: 'text-primary-900', label: 'Resolved' },
-      closed: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Closed' },
+      resolved: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: 'Resolved' },
+      closed: { bg: 'bg-gray-900', text: 'text-white', label: 'Closed' },
       
       // Priority
-      low: { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Low' },
+      low: { bg: 'bg-green-100', text: 'text-green-800', label: 'Low' },
       medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Medium' },
-      high: { bg: 'bg-dark-100', text: 'text-dark-800', label: 'High' },
+      high: { bg: 'bg-red-100', text: 'text-red-800', label: 'High' },
     };
     
     return configs[status as keyof typeof configs] || configs.offline;
