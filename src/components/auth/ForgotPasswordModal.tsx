@@ -22,15 +22,8 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     try {
       console.log('Attempting to send password reset email to:', email);
       
-      // Configure action code settings for better UX
-      const actionCodeSettings = {
-        url: window.location.origin + '/login', // Redirect back to login after reset
-        handleCodeInApp: false, // Handle in Firebase hosted page
-      };
-      
-      await sendPasswordResetEmail(auth, email, actionCodeSettings);
-      console.log('Password reset email sent successfully');
       await sendPasswordResetEmail(auth, email);
+      console.log('Password reset email sent successfully');
       setSuccess(true);
     } catch (error: any) {
       console.error('Password reset error:', error);
