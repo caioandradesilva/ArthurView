@@ -12,6 +12,14 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:123456789:web:demo'
 };
 
+// Log Firebase configuration status
+console.log('Firebase Config Status:', {
+  hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY,
+  hasAuthDomain: !!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  hasProjectId: !!import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId
+});
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
@@ -19,4 +27,6 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+// Log Firebase initialization
+console.log('Firebase initialized with auth domain:', auth.config.authDomain);
 export default app;

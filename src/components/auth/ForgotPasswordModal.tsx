@@ -20,15 +20,31 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     setError('');
 
     try {
+      console.log('Attempting to send password reset email to:', email);
+      
+      // Configure action code settings for better UX
+      const actionCodeSettings = {
+        url: window.location.origin + '/login', // Redirect back to login after reset
+        handleCodeInApp: false, // Handle in Firebase hosted page
+      };
+      
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      console.log('Password reset email sent successfully');
       await sendPasswordResetEmail(auth, email);
       setSuccess(true);
     } catch (error: any) {
+      console.error('Password reset error:', error);
+      
       if (error.code === 'auth/user-not-found') {
         setError('No account found with this email address');
       } else if (error.code === 'auth/invalid-email') {
         setError('Please enter a valid email address');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many requests. Please wait a moment before trying again.');
+      } else if (error.code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection and try again.');
       } else {
-        setError('Failed to send reset email. Please try again.');
+        setError(`Failed to send reset email: ${error.message || 'Unknown error'}. Please try again.`);
       }
     } finally {
       setLoading(false);

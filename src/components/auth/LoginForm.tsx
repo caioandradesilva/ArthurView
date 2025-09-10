@@ -17,10 +17,12 @@ const LoginForm: React.FC = () => {
     try {
       setError('');
       setLoading(true);
+      console.log('Attempting login for:', email);
       await login(email, password);
+      console.log('Login successful');
     } catch (error: any) {
-      setError('Failed to sign in. Please check your credentials.');
       console.error('Login error:', error);
+      setError('Failed to sign in. Please check your credentials.');
     } finally {
       setLoading(false);
     }
