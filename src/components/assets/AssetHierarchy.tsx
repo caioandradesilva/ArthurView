@@ -548,7 +548,10 @@ const AssetHierarchy: React.FC = () => {
         <DeleteConfirmModal
           isOpen={true}
           onClose={() => setDeleteModal({ type: null, item: null })}
-          onConfirm={() => handleDelete(deleteModal.type!, deleteModal.item!.id)}
+          onConfirm={() => {
+            console.log('Delete modal - Type:', deleteModal.type, 'Item ID:', deleteModal.item?.id);
+            handleDelete(deleteModal.type!, deleteModal.item!.id);
+          }}
           assetType={deleteModal.type}
           assetName={
             deleteModal.type === 'site' ? (deleteModal.item as Site).name :
