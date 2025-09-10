@@ -88,6 +88,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
                     <li>• The reset link expires after 1 hour</li>
                     <li>• Contact your administrator if you're unsure about your email address</li>
                   </ul>
+                </div>
               </div>
               <button
                 onClick={handleClose}
