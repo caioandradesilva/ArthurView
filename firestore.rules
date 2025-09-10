@@ -12,15 +12,27 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'admin';
+      return isAuthenticated() && (
+        getUserData().role == 'admin' || 
+        getUserData().role == 'Admin' || 
+        getUserData().role == 'ADMIN'
+      );
     }
     
     function isOperator() {
-      return isAuthenticated() && getUserData().role == 'operator';
+      return isAuthenticated() && (
+        getUserData().role == 'operator' || 
+        getUserData().role == 'Operator' || 
+        getUserData().role == 'OPERATOR'
+      );
     }
     
     function isClient() {
-      return isAuthenticated() && getUserData().role == 'client';
+      return isAuthenticated() && (
+        getUserData().role == 'client' || 
+        getUserData().role == 'Client' || 
+        getUserData().role == 'CLIENT'
+      );
     }
     
     function hasAccessToSite(siteId) {
