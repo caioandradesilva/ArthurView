@@ -157,24 +157,18 @@ const AssetHierarchy: React.FC = () => {
         return;
       }
       
-      console.log(`Attempting to delete ${type} with ID: ${id}`);
-      
       switch (type) {
         case 'site':
           await FirestoreService.deleteSite(id);
-          console.log('Site deleted successfully');
           break;
         case 'container':
           await FirestoreService.deleteContainer(id);
-          console.log('Container deleted successfully');
           break;
         case 'rack':
           await FirestoreService.deleteRack(id);
-          console.log('Rack deleted successfully');
           break;
         case 'asic':
           await FirestoreService.deleteASIC(id);
-          console.log('ASIC deleted successfully');
           break;
       }
       
@@ -182,12 +176,6 @@ const AssetHierarchy: React.FC = () => {
       loadSites();
       setDeleteModal({ type: null, item: null });
     } catch (error) {
-      console.error('Error deleting asset:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      });
       // Handle specific Firebase errors
       let errorMessage = 'Unknown error';
       if (error.code === 'permission-denied') {
@@ -561,7 +549,6 @@ const AssetHierarchy: React.FC = () => {
           isOpen={true}
           onClose={() => setDeleteModal({ type: null, item: null })}
           onConfirm={() => {
-            console.log('Delete modal - Type:', deleteModal.type, 'Item ID:', deleteModal.item?.id);
             handleDelete(deleteModal.type!, deleteModal.item!.id);
           }}
           assetType={deleteModal.type}
