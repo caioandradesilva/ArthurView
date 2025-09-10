@@ -152,12 +152,8 @@ const AssetHierarchy: React.FC = () => {
 
   const handleDelete = async (type: 'site' | 'container' | 'rack' | 'asic', id: string) => {
     try {
-      console.log('Attempting to delete:', type, id);
-      console.log('Current user profile:', userProfile);
-      console.log('User role:', userProfile?.role);
-      
       if (!userProfile || userProfile.role !== 'admin') {
-        alert('You must be an admin to delete assets. Current role: ' + (userProfile?.role || 'none'));
+        alert('You must be an admin to delete assets.');
         return;
       }
       
