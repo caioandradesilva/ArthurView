@@ -203,8 +203,11 @@ const Dashboard: React.FC = () => {
                         </p>
                       </div>
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        ticket.status === 'open' ? 'bg-primary-100 text-primary-800' :
-                        ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                        ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                        ticket.status === 'in_progress' ? 'bg-orange-100 text-orange-800' :
+                        ticket.status === 'waiting_parts' ? 'bg-purple-100 text-purple-800' :
+                        ticket.status === 'resolved' ? 'bg-indigo-100 text-indigo-800' :
+                        ticket.status === 'closed' ? 'bg-gray-900 text-white' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {ticket.status.replace('_', ' ')}
