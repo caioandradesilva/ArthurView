@@ -42,6 +42,88 @@ const ASICTimeline: React.FC<ASICTimelineProps> = ({ events }) => {
     }
   };
 
+  const formatMetadata = (metadata: Record<string, any> | undefined, eventType: string) => {
+    if (!metadata) return null;
+
+    const formatValue = (key: string, value: any): string => {
+      if (value === null || value === undefined) return 'N/A';
+      if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+      if (typeof value === 'object') {
+        // Handle nested objects
+        if (Array.isArray(value)) {
+          return value.join(', ');
+        }
+        return JSON.stringify(value, null, 2);
+      }
+      return String(value);
+    };
+
+    const getKeyLabel = (key: string): string => {
+      const labels: Record<string, string> = {
+        ticketId: 'Ticket ID',
+        ticketNumber: 'Ticket #',
+        priority: 'Priority',
+        status: 'Status',
+        action: 'Action',
+        updates: 'Changes',
+        amount: 'Amount',
+        category: 'Category',
+        commentId: 'Comment ID',
+        asicId: 'ASIC ID',
+        clientId: 'Client ID',
+        model: 'Model',
+        ipAddress: 'IP Address',
+        macAddress: 'MAC Address',
+        hashRate: 'Hash Rate',
+        platformId: 'Platform ID'
+      };
+      return labels[key] || key.charAt(0).toUpperCase() + key.slice(1);
+    };
+
+    // Filter out less useful metadata keys
+    const hiddenKeys = ['asicId', 'commentId'];
+    const filteredMetadata = Object.entries(metadata).filter(([key]) => !hiddenKeys.includes(key));
+
+    if (filteredMetadata.length === 0) return null;
+
+    return (
+      <div className="mt-2 space-y-1">
+        {filteredMetadata.map(([key, value]) => {
+          const formattedValue = formatValue(key, value);
+          
+          // Special handling for updates object
+          if (key === 'updates' && typeof value === 'object' && value !== null) {
+            return (
+              <div key={key} className="text-xs bg-gray-50 p-2 rounded border">
+                <span className="font-medium text-gray-700">Changes Made:</span>
+                <div className="mt-1 space-y-1">
+                  {Object.entries(value).map(([updateKey, updateValue]) => (
+                    <div key={updateKey} className="flex justify-between">
+                      <span className="text-gray-600">{getKeyLabel(updateKey)}:</span>
+                      <span className="text-gray-900 font-medium">{formatValue(updateKey, updateValue)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+
+          // Skip if value is too long or not useful
+          if (formattedValue.length > 100) return null;
+
+          return (
+            <div key={key} className="flex items-center justify-between text-xs">
+              <span className="text-gray-600">{getKeyLabel(key)}:</span>
+              <span className="text-gray-900 font-medium ml-2 truncate max-w-32" title={formattedValue}>
+                {key === 'amount' && typeof value === 'number' ? `$${value.toFixed(2)}` : formattedValue}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (events.length === 0) {
     return (
       <div className="text-center py-8">
@@ -88,17 +170,9 @@ const ASICTimeline: React.FC<ASICTimelineProps> = ({ events }) => {
                 <User className="h-3 w-3" />
                 <span>{event.performedBy}</span>
               </div>
-              
-              {event.metadata && (
-                <div className="text-xs bg-gray-100 px-2 py-1 rounded">
-                  {Object.entries(event.metadata).map(([key, value]) => (
-                    <span key={key} className="mr-2">
-                      {key}: {String(value)}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
+            
+            {formatMetadata(event.metadata, event.eventType)}
           </div>
         </div>
       ))}
