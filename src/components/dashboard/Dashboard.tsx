@@ -43,9 +43,19 @@ const Dashboard: React.FC = () => {
       const dashboardStats = await FirestoreService.getDashboardStats();
       setStats(dashboardStats);
 
-      // Load only recent tickets (paginated)
-      const recentTicketsData = await FirestoreService.getTicketsPaginated(5);
-      setRecentTickets(recentTicketsData);
+      // Load recent tickets (last 20 to filter by date)
+      const allRecentTickets = await FirestoreService.getTicketsPaginated(20);
+      
+      // Filter tickets to only show those created within the last 3 days
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
+      const filteredRecentTickets = allRecentTickets.filter(ticket => {
+        const ticketDate = ticket.createdAt?.toDate ? ticket.createdAt.toDate() : new Date(ticket.createdAt);
+        return ticketDate >= threeDaysAgo;
+      });
+      
+      setRecentTickets(filteredRecentTickets);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -134,7 +144,7 @@ const Dashboard: React.FC = () => {
               View all
             </Link>
           </div>
-          <div className="p-6">
+          <div className="p-6 max-h-80 overflow-y-auto">
             {loading ? (
               <div className="animate-pulse space-y-3">
                 {[...Array(3)].map((_, i) => (
@@ -144,8 +154,8 @@ const Dashboard: React.FC = () => {
             ) : recentTickets.length === 0 ? (
               <div className="text-center py-8">
                 <Ticket className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No recent tickets</p>
-                <p className="text-sm text-gray-400 mt-1">New tickets will appear here</p>
+                <p className="text-gray-500">No recent tickets (last 3 days)</p>
+                <p className="text-sm text-gray-400 mt-1">Tickets from the last 3 days will appear here</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -166,7 +176,11 @@ const Dashboard: React.FC = () => {
                           </span>
                         </div>
                         <p className="text-xs text-gray-500">
-                          {ticket.createdBy} • {ticket.priority} priority
+                          {ticket.createdBy} • {ticket.priority} priority • {
+                            ticket.createdAt?.toDate 
+                              ? ticket.createdAt.toDate().toLocaleDateString('en-US')
+                              : new Date(ticket.createdAt).toLocaleDateString('en-US')
+                          }
                         </p>
                       </div>
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
