@@ -15,6 +15,7 @@ import BulkImportPage from './pages/BulkImportPage';
 
 const AppContent: React.FC = () => {
   const { currentUser, loading } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (loading) {
     return (
@@ -30,10 +31,10 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
+      <Navigation isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`} id="main-content">
         <main className="min-h-screen">
           <Routes>
             <Route path="/" element={<Dashboard />} />
