@@ -191,7 +191,10 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ backgroundColor: '#D8FF57', color: '#000' }}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#c4e84d')}
+              onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = '#D8FF57')}
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </button>
