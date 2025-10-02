@@ -110,9 +110,14 @@ const TicketsPage: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...tickets];
 
-    // Apply "My Tickets" filter first
+    // Exclude closed tickets by default unless status filter is explicitly set to 'closed' or 'all'
+    if (statusFilter !== 'closed') {
+      filtered = filtered.filter(ticket => ticket.status !== 'closed');
+    }
+
+    // Apply "My Tickets" filter
     if (showMyTickets && userProfile) {
-      filtered = filtered.filter(ticket => 
+      filtered = filtered.filter(ticket =>
         ticket.createdBy === userProfile.name ||
         (ticket.assignedTo && (
           (Array.isArray(ticket.assignedTo) && ticket.assignedTo.includes(userProfile.name)) ||
@@ -124,19 +129,19 @@ const TicketsPage: React.FC = () => {
     // Apply search filter
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(ticket => 
+      filtered = filtered.filter(ticket =>
         ticket.title.toLowerCase().includes(searchLower) ||
         ticket.description.toLowerCase().includes(searchLower) ||
         ticket.createdBy.toLowerCase().includes(searchLower) ||
         (ticket.assignedTo && ticket.assignedTo.toLowerCase().includes(searchLower)) ||
         (ticket.ticketNumber && ticket.ticketNumber.toString().includes(searchLower)) ||
-        (ticket.asicId && asicsMap[ticket.asicId] && 
+        (ticket.asicId && asicsMap[ticket.asicId] &&
          (asicsMap[ticket.asicId].macAddress?.toLowerCase().includes(searchLower) ||
           asicsMap[ticket.asicId].serialNumber?.toLowerCase().includes(searchLower)))
       );
     }
 
-    // Apply status filter
+    // Apply status filter (if specific status selected)
     if (statusFilter !== 'all') {
       filtered = filtered.filter(ticket => ticket.status === statusFilter);
     }
