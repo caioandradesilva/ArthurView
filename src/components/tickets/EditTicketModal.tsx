@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { FirestoreService } from '../../lib/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Ticket } from '../../types';
+import type { Ticket, User } from '../../types';
 
 interface EditTicketModalProps {
   isOpen: boolean;
@@ -18,10 +18,11 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
     description: ticket.description,
     priority: ticket.priority,
     status: ticket.status,
-    assignedTo: Array.isArray(ticket.assignedTo) ? ticket.assignedTo.join(', ') : (ticket.assignedTo || '')
+    assignedTo: Array.isArray(ticket.assignedTo) ? ticket.assignedTo[0] || '' : (ticket.assignedTo || '')
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -30,10 +31,22 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
         description: ticket.description,
         priority: ticket.priority,
         status: ticket.status,
-        assignedTo: Array.isArray(ticket.assignedTo) ? ticket.assignedTo.join(', ') : (ticket.assignedTo || '')
+        assignedTo: Array.isArray(ticket.assignedTo) ? ticket.assignedTo[0] || '' : (ticket.assignedTo || '')
       });
+
+      // Load available users (operators and admins)
+      loadAvailableUsers();
     }
   }, [isOpen, ticket]);
+
+  const loadAvailableUsers = async () => {
+    try {
+      const users = await FirestoreService.getUsersByRole(['operator', 'admin']);
+      setAvailableUsers(users);
+    } catch (err) {
+      console.error('Error loading users:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,14 +56,21 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
     setError('');
 
     try {
-      const updates: Partial<Ticket> = { ...formData };
-      if (!updates.assignedTo || updates.assignedTo.trim() === '') {
-        updates.assignedTo = undefined;
+      const updates: Partial<Ticket> = {
+        title: formData.title,
+        description: formData.description,
+        priority: formData.priority,
+        status: formData.status
+      };
+
+      // Only include assignedTo if a user is selected
+      if (formData.assignedTo && formData.assignedTo.trim() !== '') {
+        updates.assignedTo = [formData.assignedTo.trim()];
       } else {
-        // Convert string to array by splitting on comma and trimming whitespace
-        updates.assignedTo = updates.assignedTo.split(',').map(name => name.trim()).filter(name => name.length > 0);
+        // Set to empty array if no user is selected
+        updates.assignedTo = [];
       }
-      
+
       await FirestoreService.updateTicket(ticket.id, updates, userProfile.name);
       onSuccess();
     } catch (err: any) {
@@ -145,13 +165,18 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Assigned To
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.assignedTo}
                 onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                placeholder="Technician name (optional)"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              />
+              >
+                <option value="">Unassigned</option>
+                {availableUsers.map((user) => (
+                  <option key={user.id} value={user.name}>
+                    {user.name} ({user.role})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

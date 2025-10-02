@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, MapPin, Package, Server, Cpu } from 'lucide-react';
 import { FirestoreService } from '../../lib/firestore';
 import { useAuth } from '../../contexts/AuthContext';
-import type { ASIC, Site, Container, Rack } from '../../types';
+import type { ASIC, Site, Container, Rack, User } from '../../types';
 
 interface CreateTicketModalProps {
   isOpen: boolean;
@@ -24,7 +24,8 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     priority: 'medium' as 'low' | 'medium' | 'high',
     asicId: preselectedAsicId || '',
     assetType: 'none' as 'none' | 'site' | 'container' | 'rack' | 'asic',
-    selectedAssetId: preselectedAsicId || ''
+    selectedAssetId: preselectedAsicId || '',
+    assignedTo: ''
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<{
@@ -41,6 +42,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [allContainers, setAllContainers] = useState<Container[]>([]);
   const [allRacks, setAllRacks] = useState<Rack[]>([]);
   const [allASICs, setAllASICs] = useState<ASIC[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,8 +58,18 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     }
     if (isOpen) {
       loadAllData();
+      loadAvailableUsers();
     }
   }, [isOpen, preselectedAsicId]);
+
+  const loadAvailableUsers = async () => {
+    try {
+      const users = await FirestoreService.getUsersByRole(['operator', 'admin']);
+      setAvailableUsers(users);
+    } catch (err) {
+      console.error('Error loading users:', err);
+    }
+  };
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
@@ -211,6 +223,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         siteId: siteId,
         createdBy: userProfile.name,
         createdBySiteId: siteId,
+        assignedTo: formData.assignedTo ? [formData.assignedTo] : [],
         estimatedCost: 0,
         costCurrency: 'USD',
         isUrgent: false,
@@ -220,13 +233,14 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       });
       
       onSuccess();
-      setFormData({ 
-        title: '', 
-        description: '', 
-        priority: 'medium', 
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'medium',
         asicId: preselectedAsicId || '',
         assetType: 'none',
-        selectedAssetId: preselectedAsicId || ''
+        selectedAssetId: preselectedAsicId || '',
+        assignedTo: ''
       });
       setSelectedAsset({ type: null, data: null });
       setSearchTerm('');
@@ -437,21 +451,42 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             />
           </div>
 
-          <div>
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
-              Priority *
-            </label>
-            <select
-              id="priority"
-              required
-              value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="low">Low - Minor issue, no immediate impact</option>
-              <option value="medium">Medium - Moderate issue, some impact on operations</option>
-              <option value="high">High - Critical issue, significant operational impact</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
+                Priority *
+              </label>
+              <select
+                id="priority"
+                required
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="low">Low - Minor issue, no immediate impact</option>
+                <option value="medium">Medium - Moderate issue, some impact on operations</option>
+                <option value="high">High - Critical issue, significant operational impact</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700 mb-2">
+                Assigned To
+              </label>
+              <select
+                id="assignedTo"
+                value={formData.assignedTo}
+                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">Unassigned</option>
+                {availableUsers.map((user) => (
+                  <option key={user.id} value={user.name}>
+                    {user.name} ({user.role})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex space-x-3 pt-4">

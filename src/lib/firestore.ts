@@ -235,9 +235,17 @@ export class FirestoreService {
     const ticketRef = doc(db, 'tickets', id);
     const ticketDoc = await getDoc(ticketRef);
     const currentTicket = ticketDoc.data() as Ticket;
-    
+
+    // Remove undefined fields to prevent Firestore errors
+    const cleanUpdates = Object.entries(updates).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as Record<string, any>);
+
     await updateDoc(ticketRef, {
-      ...updates,
+      ...cleanUpdates,
       updatedAt: serverTimestamp()
     });
     
@@ -994,6 +1002,13 @@ export class FirestoreService {
       ...updates,
       updatedAt: serverTimestamp()
     });
+  }
+
+  // Get users by role
+  static async getUsersByRole(roles: string[]): Promise<User[]> {
+    const q = query(collection(db, 'users'), where('role', 'in', roles));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
   }
 
   // Delete operations with hierarchy
