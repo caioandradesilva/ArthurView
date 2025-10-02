@@ -12,6 +12,10 @@ import TicketDetailsPage from './pages/TicketDetailsPage';
 import HostPage from './pages/HostPage';
 import ClientDetailsPage from './pages/ClientDetailsPage';
 import BulkImportPage from './pages/BulkImportPage';
+import MaintenancePage from './pages/MaintenancePage';
+import MaintenanceDetailsPage from './pages/MaintenanceDetailsPage';
+import MaintenanceCalendarPage from './pages/MaintenanceCalendarPage';
+import AdminPage from './pages/AdminPage';
 
 const AppContent: React.FC = () => {
   const { currentUser, loading } = useAuth();
@@ -40,12 +44,16 @@ const AppContent: React.FC = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/assets" element={<AssetsPage />} />
             <Route path="/tickets" element={<TicketsPage />} />
+            <Route path="/maintenance" element={<MaintenancePage />} />
+            <Route path="/maintenance/:id" element={<MaintenanceDetailsPage />} />
+            <Route path="/maintenance/calendar" element={<MaintenanceCalendarPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/asic/:id" element={<ASICDetailsPage />} />
             <Route path="/ticket/:id" element={<TicketDetailsPage />} />
             <Route path="/host" element={<HostPage />} />
             <Route path="/client/:id" element={<ClientDetailsPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

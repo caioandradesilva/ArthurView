@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Search, Home, Server, Ticket, Users, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Menu, X, Search, Home, Server, Ticket, Users, Upload, ChevronLeft, ChevronRight, Wrench, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import UserProfileModal from '../auth/UserProfileModal';
 
@@ -19,9 +19,14 @@ const Navigation: React.FC<NavigationProps> = ({ isCollapsed, setIsCollapsed }) 
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Assets', href: '/assets', icon: Server },
     { name: 'Tickets', href: '/tickets', icon: Ticket },
+    { name: 'Maintenance', href: '/maintenance', icon: Wrench },
     { name: 'Host', href: '/host', icon: Users },
     { name: 'Search', href: '/search', icon: Search },
   ];
+
+  const adminNavigation = userProfile?.role === 'admin' ? [
+    { name: 'Admin', href: '/admin', icon: BarChart3 },
+  ] : [];
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -76,6 +81,25 @@ const Navigation: React.FC<NavigationProps> = ({ isCollapsed, setIsCollapsed }) 
 
             <nav className="px-4 py-6">
               {navigation.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center space-x-3 px-3 py-4 rounded-lg mb-2 transition-colors ${
+                      isActive(item.href)
+                        ? 'bg-primary-500 text-dark-900'
+                        : 'text-gray-300 hover:bg-dark-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{item.name}</span>
+                  </Link>
+                );
+              })}
+
+              {adminNavigation.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
@@ -168,8 +192,31 @@ const Navigation: React.FC<NavigationProps> = ({ isCollapsed, setIsCollapsed }) 
                   key={item.name}
                   to={item.href}
                   className={`flex items-center rounded-lg transition-colors ${
-                    isCollapsed 
-                      ? 'justify-center p-3' 
+                    isCollapsed
+                      ? 'justify-center p-3'
+                      : 'space-x-3 px-3 py-3'
+                  } ${
+                    isActive(item.href)
+                      ? 'bg-primary-500 text-dark-900'
+                      : 'text-gray-300 hover:bg-dark-800 hover:text-white'
+                  }`}
+                  title={isCollapsed ? item.name : undefined}
+                >
+                  <Icon className="h-5 w-5" />
+                  {!isCollapsed && <span className="font-medium">{item.name}</span>}
+                </Link>
+              );
+            })}
+
+            {adminNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`flex items-center rounded-lg transition-colors ${
+                    isCollapsed
+                      ? 'justify-center p-3'
                       : 'space-x-3 px-3 py-3'
                   } ${
                     isActive(item.href)

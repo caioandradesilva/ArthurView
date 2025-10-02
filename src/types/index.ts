@@ -44,6 +44,11 @@ export interface ASIC {
   status: 'online' | 'offline' | 'maintenance' | 'error';
   lastSeen?: Date; // Last time ASIC was online
   maintenanceSchedule?: Date; // Scheduled maintenance
+  lastMaintenanceDate?: Date; // Last completed maintenance
+  nextMaintenanceDate?: Date; // Next scheduled maintenance
+  maintenanceScheduleId?: string; // Reference to active maintenance schedule
+  totalMaintenanceHours?: number; // Lifetime maintenance hours
+  maintenanceCount?: number; // Total number of maintenance performed
   createdAt: Date;
   updatedAt: Date;
 }
@@ -160,6 +165,140 @@ export interface ClientAuditEvent {
   eventType: 'client_created' | 'client_updated' | 'asic_assigned' | 'asic_removed' | 'comment_added' | 'contract_updated';
   description: string;
   performedBy: string;
+  metadata?: Record<string, any>;
+  createdAt: Date;
+}
+
+export interface MaintenanceTicket {
+  id: string;
+  ticketNumber: number;
+  title: string;
+  description: string;
+  maintenanceType: 'preventive' | 'corrective' | 'predictive' | 'inspection' | 'upgrade';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'scheduled' | 'pending_approval' | 'approved' | 'dispatched' | 'in_progress' | 'awaiting_parts' | 'completed' | 'verified' | 'closed';
+  assetType: 'site' | 'container' | 'rack' | 'asic';
+  assetId: string;
+  siteId: string;
+  scheduledDate?: Date;
+  estimatedDuration?: number;
+  createdBy: string;
+  createdByRole: 'operator' | 'admin' | 'client';
+  assignedTo: string[];
+  approvedBy?: string;
+  approvedAt?: Date;
+  workStartedAt?: Date;
+  workCompletedAt?: Date;
+  workPerformed?: string;
+  laborHours?: number;
+  partsUsed: PartUsed[];
+  verifiedBy?: string;
+  verifiedAt?: Date;
+  verificationNotes?: string;
+  estimatedCost?: number;
+  actualCost?: number;
+  costCurrency: 'USD' | 'BRL';
+  isUrgent: boolean;
+  isRecurring: boolean;
+  recurringScheduleId?: string;
+  clientVisible: boolean;
+  createdAt: Date | any;
+  updatedAt: Date | any;
+  closedAt?: Date;
+}
+
+export interface PartUsed {
+  partName: string;
+  quantity: number;
+  partNumber?: string;
+  cost?: number;
+}
+
+export interface MaintenanceAttachment {
+  id: string;
+  maintenanceTicketId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: 'image' | 'document' | 'video';
+  fileSize: number;
+  mimeType: string;
+  category: 'before' | 'during' | 'after' | 'parts' | 'other';
+  description?: string;
+  uploadedBy: string;
+  uploadedAt: Date;
+  createdAt: Date;
+}
+
+export interface MaintenanceSchedule {
+  id: string;
+  name: string;
+  description: string;
+  assetType: 'site' | 'container' | 'rack' | 'asic';
+  assetId: string;
+  siteId: string;
+  maintenanceType: 'preventive' | 'inspection';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  frequencyValue: number;
+  startDate: Date;
+  endDate?: Date;
+  nextScheduledDate: Date;
+  lastGeneratedDate?: Date;
+  ticketTemplate: {
+    title: string;
+    description: string;
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    estimatedDuration: number;
+    assignedTo: string[];
+  };
+  isActive: boolean;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MaintenancePart {
+  id: string;
+  partNumber: string;
+  partName: string;
+  description: string;
+  category: 'power_supply' | 'fan' | 'board' | 'cable' | 'other';
+  quantityAvailable: number;
+  quantityReserved: number;
+  reorderLevel: number;
+  reorderQuantity: number;
+  unitCost: number;
+  currency: 'USD' | 'BRL';
+  siteId: string;
+  location: string;
+  supplierName?: string;
+  supplierPartNumber?: string;
+  leadTimeDays?: number;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MaintenanceComment {
+  id: string;
+  maintenanceTicketId: string;
+  message: string;
+  commentType: 'note' | 'status_update' | 'escalation' | 'verification';
+  author: string;
+  authorRole: 'operator' | 'admin' | 'client';
+  hasAttachments: boolean;
+  attachmentIds: string[];
+  createdAt: Date;
+}
+
+export interface MaintenanceAuditEvent {
+  id: string;
+  maintenanceTicketId: string;
+  eventType: 'created' | 'status_changed' | 'assigned' | 'approved' | 'started' | 'completed' | 'verified' | 'part_added' | 'attachment_added' | 'comment_added';
+  description: string;
+  performedBy: string;
+  performedByRole: 'operator' | 'admin' | 'client';
+  previousValue?: string;
+  newValue?: string;
   metadata?: Record<string, any>;
   createdAt: Date;
 }
