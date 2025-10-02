@@ -482,7 +482,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 <option value="">Unassigned</option>
                 {availableUsers.map((user) => (
                   <option key={user.id} value={user.name}>
-                    {user.name} ({user.role})
+                    {user.name}
                   </option>
                 ))}
               </select>

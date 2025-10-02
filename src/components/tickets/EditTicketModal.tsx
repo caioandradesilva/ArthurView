@@ -173,7 +173,7 @@ const EditTicketModal: React.FC<EditTicketModalProps> = ({ isOpen, onClose, tick
                 <option value="">Unassigned</option>
                 {availableUsers.map((user) => (
                   <option key={user.id} value={user.name}>
-                    {user.name} ({user.role})
+                    {user.name}
                   </option>
                 ))}
               </select>
