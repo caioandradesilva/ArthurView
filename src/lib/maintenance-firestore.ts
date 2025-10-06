@@ -241,6 +241,18 @@ export class MaintenanceFirestoreService {
         newValue: updates.status,
         metadata: { updates }
       });
+
+      // If status changed to 'verified' or 'closed', auto-close originating ticket
+      if ((updates.status === 'verified' || updates.status === 'closed') && currentTicket.originatingTicketId) {
+        await FirestoreService.updateTicket(
+          currentTicket.originatingTicketId,
+          {
+            status: 'closed',
+            resolvedAt: new Date()
+          },
+          performedBy
+        );
+      }
     } else {
       await this.createMaintenanceAuditEvent({
         maintenanceTicketId: id,
