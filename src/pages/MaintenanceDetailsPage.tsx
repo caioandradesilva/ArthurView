@@ -27,8 +27,12 @@ const MaintenanceDetailsPage: React.FC = () => {
   ];
 
   useEffect(() => {
-    if (id && !id.startsWith('recurring-')) {
-      loadTicketData();
+    if (id) {
+      if (id.startsWith('recurring-')) {
+        loadRecurringTicketData();
+      } else {
+        loadTicketData();
+      }
     }
   }, [id]);
 
@@ -88,6 +92,96 @@ const MaintenanceDetailsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading maintenance ticket data:', error);
+      setTicket(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadRecurringTicketData = async () => {
+    if (!id || !id.startsWith('recurring-')) return;
+
+    setLoading(true);
+    try {
+      const parts = id.split('-');
+      const scheduleId = parts[1];
+      const timestamp = parseInt(parts[2]);
+
+      const schedule = await MaintenanceFirestoreService.getMaintenanceScheduleById(scheduleId);
+
+      if (schedule) {
+        const scheduledDate = new Date(timestamp);
+
+        const virtualTicket: MaintenanceTicket = {
+          id: id,
+          ticketNumber: 9000 + Math.floor(Math.random() * 1000),
+          title: schedule.ticketTemplate.title,
+          description: schedule.ticketTemplate.description,
+          maintenanceType: schedule.maintenanceType,
+          priority: schedule.ticketTemplate.priority,
+          status: 'scheduled',
+          assetType: schedule.assetType,
+          assetId: schedule.assetId,
+          siteId: schedule.siteId,
+          scheduledDate: scheduledDate,
+          estimatedDuration: schedule.ticketTemplate.estimatedDuration,
+          createdBy: schedule.createdBy,
+          createdByRole: 'admin' as any,
+          assignedTo: schedule.ticketTemplate.assignedTo,
+          partsUsed: [],
+          estimatedCost: 0,
+          actualCost: 0,
+          costCurrency: 'USD',
+          isUrgent: false,
+          isRecurring: true,
+          recurringScheduleId: schedule.id,
+          clientVisible: true,
+          createdAt: schedule.createdAt,
+          updatedAt: schedule.updatedAt
+        };
+
+        setTicket(virtualTicket);
+
+        if (schedule.assetId) {
+          let assetData: ASIC | Site | Container | Rack | null = null;
+
+          switch (schedule.assetType) {
+            case 'asic':
+              assetData = await FirestoreService.getASICById(schedule.assetId);
+              break;
+            case 'site':
+              const sites = await FirestoreService.getSites();
+              assetData = sites.find(s => s.id === schedule.assetId) || null;
+              break;
+            case 'container':
+              const allSites = await FirestoreService.getSites();
+              for (const site of allSites) {
+                const containers = await FirestoreService.getContainersBySite(site.id);
+                assetData = containers.find(c => c.id === schedule.assetId) || null;
+                if (assetData) break;
+              }
+              break;
+            case 'rack':
+              const sitesForRack = await FirestoreService.getSites();
+              for (const site of sitesForRack) {
+                const containersForRack = await FirestoreService.getContainersBySite(site.id);
+                for (const container of containersForRack) {
+                  const racks = await FirestoreService.getRacksByContainer(container.id);
+                  assetData = racks.find(r => r.id === schedule.assetId) || null;
+                  if (assetData) break;
+                }
+                if (assetData) break;
+              }
+              break;
+          }
+
+          if (assetData) {
+            setAsset(assetData);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading recurring ticket data:', error);
       setTicket(null);
     } finally {
       setLoading(false);
@@ -224,18 +318,16 @@ const MaintenanceDetailsPage: React.FC = () => {
     );
   }
 
-  if (!ticket || id?.startsWith('recurring-')) {
+  if (!ticket) {
     return (
       <div className="p-4 lg:p-6 max-w-7xl mx-auto">
         <div className="text-center py-12">
           <Wrench className="h-16 w-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            {id?.startsWith('recurring-') ? 'Recurring Maintenance' : 'Maintenance not found'}
+            Maintenance not found
           </h2>
           <p className="text-gray-600 mb-6">
-            {id?.startsWith('recurring-')
-              ? 'This is a scheduled occurrence. The actual maintenance ticket will be created when the work begins.'
-              : 'The requested maintenance ticket could not be found.'}
+            The requested maintenance ticket could not be found.
           </p>
           <Link
             to="/maintenance"
@@ -283,6 +375,20 @@ const MaintenanceDetailsPage: React.FC = () => {
   return (
     <div className="p-4 lg:p-6 max-w-7xl mx-auto">
       <Breadcrumb items={breadcrumbItems} />
+
+      {ticket.isRecurring && id?.startsWith('recurring-') && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start space-x-3">
+            <Calendar className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-semibold text-blue-900 mb-1">Scheduled Recurring Maintenance</h3>
+              <p className="text-sm text-blue-700">
+                This is a scheduled occurrence from a recurring maintenance schedule. The actual maintenance ticket will be created automatically when the work begins or when an operator starts the task.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
@@ -516,6 +622,13 @@ const MaintenanceDetailsPage: React.FC = () => {
 
           {activeTab === 'comments' && (
             <div className="space-y-6">
+              {ticket.isRecurring && id?.startsWith('recurring-') && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm text-yellow-800">
+                    Comments are not available for scheduled occurrences. Comments can be added once the actual maintenance ticket is created.
+                  </p>
+                </div>
+              )}
               <div className="space-y-4">
                 {comments.length === 0 ? (
                   <p className="text-gray-600 text-center py-8">No comments yet</p>
@@ -538,46 +651,55 @@ const MaintenanceDetailsPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Comment</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Comment Type</label>
-                    <select
-                      value={commentType}
-                      onChange={(e) => setCommentType(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              {!(ticket.isRecurring && id?.startsWith('recurring-')) && (
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Comment</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Comment Type</label>
+                      <select
+                        value={commentType}
+                        onChange={(e) => setCommentType(e.target.value as any)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="note">Note</option>
+                        <option value="status_update">Status Update</option>
+                        <option value="escalation">Escalation</option>
+                        <option value="verification">Verification</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                      <textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add your comment..."
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <button
+                      onClick={handleAddComment}
+                      disabled={submittingComment || !newComment.trim()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
-                      <option value="note">Note</option>
-                      <option value="status_update">Status Update</option>
-                      <option value="escalation">Escalation</option>
-                      <option value="verification">Verification</option>
-                    </select>
+                      {submittingComment ? 'Adding...' : 'Add Comment'}
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                    <textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add your comment..."
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <button
-                    onClick={handleAddComment}
-                    disabled={submittingComment || !newComment.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    {submittingComment ? 'Adding...' : 'Add Comment'}
-                  </button>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
           {activeTab === 'timeline' && (
             <div>
+              {ticket.isRecurring && id?.startsWith('recurring-') && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-yellow-800">
+                    Timeline events are not available for scheduled occurrences. Events will be tracked once the actual maintenance ticket is created.
+                  </p>
+                </div>
+              )}
               {auditEvents.length === 0 ? (
                 <p className="text-gray-600 text-center py-8">No timeline events yet</p>
               ) : (

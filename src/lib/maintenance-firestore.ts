@@ -436,6 +436,27 @@ export class MaintenanceFirestoreService {
     });
   }
 
+  static async getMaintenanceScheduleById(scheduleId: string): Promise<MaintenanceSchedule | null> {
+    const docRef = doc(db, 'maintenanceSchedules', scheduleId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      return null;
+    }
+
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      ...data,
+      startDate: data.startDate?.toDate?.() || data.startDate,
+      endDate: data.endDate?.toDate?.() || data.endDate,
+      nextScheduledDate: data.nextScheduledDate?.toDate?.() || data.nextScheduledDate,
+      lastGeneratedDate: data.lastGeneratedDate?.toDate?.() || data.lastGeneratedDate,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
+    } as MaintenanceSchedule;
+  }
+
   static async getActiveMaintenanceSchedules(): Promise<MaintenanceSchedule[]> {
     const q = query(
       collection(db, 'maintenanceSchedules'),
