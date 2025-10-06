@@ -44,7 +44,7 @@ const MaintenanceCalendarPage: React.FC = () => {
     while (currentDate <= endDate && occurrenceCount < maxOccurrences) {
       occurrences.push({
         id: `recurring-${schedule.id}-${currentDate.getTime()}`,
-        ticketNumber: 0,
+        ticketNumber: 9000 + occurrenceCount,
         title: schedule.ticketTemplate.title,
         description: schedule.ticketTemplate.description,
         maintenanceType: schedule.maintenanceType,
@@ -100,13 +100,17 @@ const MaintenanceCalendarPage: React.FC = () => {
       const tickets = await MaintenanceFirestoreService.getAllMaintenanceTickets();
       const schedules = await MaintenanceFirestoreService.getActiveMaintenanceSchedules();
 
+      console.log('Loaded schedules:', schedules.length);
+
       const expandedTickets = [...tickets];
 
       for (const schedule of schedules) {
         const occurrences = generateRecurringOccurrences(schedule);
+        console.log(`Generated ${occurrences.length} occurrences for schedule ${schedule.id}`);
         expandedTickets.push(...occurrences);
       }
 
+      console.log('Total tickets (including recurring):', expandedTickets.length);
       setMaintenanceTickets(expandedTickets);
 
       const assetIds = [...new Set(tickets.map(t => t.assetId).filter(Boolean))];

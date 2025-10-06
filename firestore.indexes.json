@@ -117,6 +117,30 @@
         { "fieldPath": "clientId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "maintenanceSchedules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive", "order": "ASCENDING" },
+        { "fieldPath": "nextScheduledDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "maintenanceComments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "maintenanceTicketId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "maintenanceAuditEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "maintenanceTicketId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
