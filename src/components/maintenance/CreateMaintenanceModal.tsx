@@ -23,7 +23,11 @@ const CreateMaintenanceModal: React.FC<CreateMaintenanceModalProps> = ({ isOpen,
     scheduledDate: '',
     estimatedDuration: 0,
     assignedTo: [] as string[],
-    isUrgent: false
+    isUrgent: false,
+    isRecurring: false,
+    recurringFrequency: 'monthly' as 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly',
+    recurringFrequencyValue: 1,
+    recurringEndDate: ''
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<{
@@ -194,6 +198,33 @@ const CreateMaintenanceModal: React.FC<CreateMaintenanceModalProps> = ({ isOpen,
         updatedAt: new Date()
       });
 
+      if (formData.isRecurring && formData.scheduledDate) {
+        await MaintenanceFirestoreService.createMaintenanceSchedule({
+          name: formData.title,
+          description: formData.description,
+          assetType: formData.assetType,
+          assetId: formData.assetId,
+          siteId: siteId,
+          maintenanceType: formData.maintenanceType as 'preventive' | 'inspection',
+          frequency: formData.recurringFrequency,
+          frequencyValue: formData.recurringFrequencyValue,
+          startDate: new Date(formData.scheduledDate),
+          endDate: formData.recurringEndDate ? new Date(formData.recurringEndDate) : undefined,
+          nextScheduledDate: new Date(formData.scheduledDate),
+          ticketTemplate: {
+            title: formData.title,
+            description: formData.description,
+            priority: formData.priority,
+            estimatedDuration: formData.estimatedDuration || 0,
+            assignedTo: formData.assignedTo
+          },
+          isActive: true,
+          createdBy: userProfile.name,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+
       onSuccess();
       setFormData({
         title: '',
@@ -205,7 +236,11 @@ const CreateMaintenanceModal: React.FC<CreateMaintenanceModalProps> = ({ isOpen,
         scheduledDate: '',
         estimatedDuration: 0,
         assignedTo: [],
-        isUrgent: false
+        isUrgent: false,
+        isRecurring: false,
+        recurringFrequency: 'monthly',
+        recurringFrequencyValue: 1,
+        recurringEndDate: ''
       });
       setSelectedAsset({ type: null, data: null });
       setSearchTerm('');
@@ -440,34 +475,117 @@ const CreateMaintenanceModal: React.FC<CreateMaintenanceModalProps> = ({ isOpen,
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Assign To</label>
+            <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700 mb-2">
+              Assign To
+            </label>
             <select
-              multiple
-              value={formData.assignedTo}
-              onChange={(e) => setFormData({ ...formData, assignedTo: Array.from(e.target.selectedOptions, option => option.value) })}
+              id="assignedTo"
+              value={formData.assignedTo[0] || ''}
+              onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value ? [e.target.value] : [] })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              size={4}
             >
+              <option value="">Unassigned</option>
               {availableUsers.map((user) => (
                 <option key={user.id} value={user.name}>
-                  {user.name} ({user.role})
+                  {user.name}
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple operators</p>
           </div>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="isUrgent"
-              checked={formData.isUrgent}
-              onChange={(e) => setFormData({ ...formData, isUrgent: e.target.checked })}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="isUrgent" className="ml-2 block text-sm text-gray-900">
-              Mark as urgent/emergency maintenance
-            </label>
+          <div className="space-y-4 border-t border-gray-200 pt-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isUrgent"
+                checked={formData.isUrgent}
+                onChange={(e) => setFormData({ ...formData, isUrgent: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isUrgent" className="ml-2 block text-sm text-gray-900">
+                Mark as urgent/emergency maintenance
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isRecurring"
+                checked={formData.isRecurring}
+                onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="isRecurring" className="ml-2 block text-sm text-gray-900">
+                Set as recurring maintenance
+              </label>
+            </div>
+
+            {formData.isRecurring && (
+              <div className="ml-6 space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-700 font-medium">Recurring Schedule Settings</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="recurringFrequency" className="block text-sm font-medium text-gray-700 mb-2">
+                      Frequency
+                    </label>
+                    <select
+                      id="recurringFrequency"
+                      value={formData.recurringFrequency}
+                      onChange={(e) => setFormData({ ...formData, recurringFrequency: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="recurringFrequencyValue" className="block text-sm font-medium text-gray-700 mb-2">
+                      Every
+                    </label>
+                    <input
+                      type="number"
+                      id="recurringFrequencyValue"
+                      min="1"
+                      value={formData.recurringFrequencyValue}
+                      onChange={(e) => setFormData({ ...formData, recurringFrequencyValue: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Example: Every 2 {formData.recurringFrequency === 'daily' ? 'days' :
+                                formData.recurringFrequency === 'weekly' ? 'weeks' :
+                                formData.recurringFrequency === 'monthly' ? 'months' :
+                                formData.recurringFrequency === 'quarterly' ? 'quarters' : 'years'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="recurringEndDate" className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    id="recurringEndDate"
+                    value={formData.recurringEndDate}
+                    onChange={(e) => setFormData({ ...formData, recurringEndDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Leave empty for indefinite recurrence</p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                  <p className="text-xs text-blue-800">
+                    <strong>Note:</strong> This will create a schedule that automatically generates maintenance requests
+                    based on your chosen frequency. The first maintenance will be created for the scheduled date above.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex space-x-3 pt-4">
