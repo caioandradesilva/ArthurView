@@ -191,23 +191,35 @@ export class FirestoreService {
   static async createTicket(ticket: Omit<Ticket, 'id'>): Promise<string> {
     // Get the next ticket number
     const ticketNumber = await this.getNextTicketNumber();
-    
-    const docRef = await addDoc(collection(db, 'tickets'), {
+
+    // Remove undefined fields to avoid Firestore errors
+    const ticketData: any = {
       ...ticket,
       ticketNumber,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
+    };
+
+    // Clean up undefined fields
+    Object.keys(ticketData).forEach(key => {
+      if (ticketData[key] === undefined) {
+        delete ticketData[key];
+      }
     });
-    
-    // Create audit event
-    await this.createAuditEvent({
-      asicId: ticket.asicId,
-      eventType: 'ticket_created',
-      description: `Ticket #${ticketNumber} created: ${ticket.title}`,
-      performedBy: ticket.createdBy,
-      metadata: { ticketId: docRef.id, ticketNumber, priority: ticket.priority }
-    });
-    
+
+    const docRef = await addDoc(collection(db, 'tickets'), ticketData);
+
+    // Create audit event only if asicId exists
+    if (ticket.asicId) {
+      await this.createAuditEvent({
+        asicId: ticket.asicId,
+        eventType: 'ticket_created',
+        description: `Ticket #${ticketNumber} created: ${ticket.title}`,
+        performedBy: ticket.createdBy,
+        metadata: { ticketId: docRef.id, ticketNumber, priority: ticket.priority }
+      });
+    }
+
     return docRef.id;
   }
 
