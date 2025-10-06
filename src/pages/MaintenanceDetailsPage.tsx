@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Wrench, User, Clock, DollarSign, MessageSquare, CreditCard as Edit, FileText, CheckCircle, AlertCircle, Calendar, Package } from 'lucide-react';
+import { ArrowLeft, Wrench, User, Clock, DollarSign, MessageSquare, FileText, CheckCircle, AlertCircle, Calendar, Package } from 'lucide-react';
 import { MaintenanceFirestoreService } from '../lib/maintenance-firestore';
 import { FirestoreService } from '../lib/firestore';
 import { useAuth } from '../contexts/AuthContext';
