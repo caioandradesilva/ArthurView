@@ -30,16 +30,25 @@ const MaintenanceCalendarPage: React.FC = () => {
 
   const generateRecurringOccurrences = (schedule: any): MaintenanceTicket[] => {
     const occurrences: MaintenanceTicket[] = [];
-    const startDate = schedule.nextScheduledDate instanceof Date
-      ? schedule.nextScheduledDate
-      : schedule.nextScheduledDate.toDate();
-    const endDate = schedule.endDate
-      ? (schedule.endDate instanceof Date ? schedule.endDate : schedule.endDate.toDate())
-      : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
 
-    let currentDate = new Date(startDate);
-    let occurrenceCount = 0;
-    const maxOccurrences = 50;
+    try {
+      if (!schedule.nextScheduledDate) {
+        console.error('Schedule missing nextScheduledDate:', schedule);
+        return occurrences;
+      }
+
+      const startDate = schedule.nextScheduledDate instanceof Date
+        ? schedule.nextScheduledDate
+        : schedule.nextScheduledDate.toDate();
+      const endDate = schedule.endDate
+        ? (schedule.endDate instanceof Date ? schedule.endDate : schedule.endDate.toDate())
+        : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+      console.log('Generating occurrences from', startDate, 'to', endDate);
+
+      let currentDate = new Date(startDate);
+      let occurrenceCount = 0;
+      const maxOccurrences = 50;
 
     while (currentDate <= endDate && occurrenceCount < maxOccurrences) {
       occurrences.push({
@@ -91,22 +100,29 @@ const MaintenanceCalendarPage: React.FC = () => {
       occurrenceCount++;
     }
 
+    console.log(`Generated ${occurrences.length} occurrences`);
     return occurrences;
+    } catch (error) {
+      console.error('Error generating recurring occurrences:', error, schedule);
+      return occurrences;
+    }
   };
 
   const loadMaintenanceTickets = async () => {
     setLoading(true);
     try {
       const tickets = await MaintenanceFirestoreService.getAllMaintenanceTickets();
-      const schedules = await MaintenanceFirestoreService.getActiveMaintenanceSchedules();
+      console.log('Loaded tickets:', tickets.length);
 
-      console.log('Loaded schedules:', schedules.length);
+      const schedules = await MaintenanceFirestoreService.getActiveMaintenanceSchedules();
+      console.log('Loaded schedules:', schedules.length, schedules);
 
       const expandedTickets = [...tickets];
 
       for (const schedule of schedules) {
+        console.log('Processing schedule:', schedule);
         const occurrences = generateRecurringOccurrences(schedule);
-        console.log(`Generated ${occurrences.length} occurrences for schedule ${schedule.id}`);
+        console.log(`Generated ${occurrences.length} occurrences for schedule ${schedule.id}`, occurrences);
         expandedTickets.push(...occurrences);
       }
 

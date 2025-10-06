@@ -46,6 +46,7 @@ const MaintenancePage: React.FC = () => {
     setLoading(true);
     try {
       const tickets = await MaintenanceFirestoreService.getAllMaintenanceTickets();
+      console.log('MaintenancePage loaded tickets:', tickets);
       setMaintenanceTickets(tickets);
 
       const assetIds = [...new Set(tickets.map(t => t.assetId).filter(Boolean))];
