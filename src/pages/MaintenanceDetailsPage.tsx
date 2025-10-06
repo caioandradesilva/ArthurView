@@ -114,7 +114,7 @@ const MaintenanceDetailsPage: React.FC = () => {
 
         const virtualTicket: MaintenanceTicket = {
           id: id,
-          ticketNumber: 9000 + Math.floor(Math.random() * 1000),
+          ticketNumber: MaintenanceFirestoreService.generateVirtualTicketNumber(scheduleId),
           title: schedule.ticketTemplate.title,
           description: schedule.ticketTemplate.description,
           maintenanceType: schedule.maintenanceType,

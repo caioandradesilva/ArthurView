@@ -55,7 +55,7 @@ const MaintenancePage: React.FC = () => {
       for (const schedule of schedules) {
         const nextOccurrence: MaintenanceTicket = {
           id: `recurring-${schedule.id}-${schedule.nextScheduledDate.getTime()}`,
-          ticketNumber: 9000 + parseInt(schedule.id.slice(-3), 16) % 1000,
+          ticketNumber: MaintenanceFirestoreService.generateVirtualTicketNumber(schedule.id),
           title: schedule.ticketTemplate.title,
           description: schedule.ticketTemplate.description,
           maintenanceType: schedule.maintenanceType,

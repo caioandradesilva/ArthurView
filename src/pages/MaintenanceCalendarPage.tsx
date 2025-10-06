@@ -53,7 +53,7 @@ const MaintenanceCalendarPage: React.FC = () => {
     while (currentDate <= endDate && occurrenceCount < maxOccurrences) {
       occurrences.push({
         id: `recurring-${schedule.id}-${currentDate.getTime()}`,
-        ticketNumber: 9000 + occurrenceCount,
+        ticketNumber: MaintenanceFirestoreService.generateVirtualTicketNumber(schedule.id),
         title: schedule.ticketTemplate.title,
         description: schedule.ticketTemplate.description,
         maintenanceType: schedule.maintenanceType,

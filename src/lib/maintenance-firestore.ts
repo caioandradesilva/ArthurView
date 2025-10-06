@@ -25,6 +25,16 @@ import type {
 } from '../types';
 
 export class MaintenanceFirestoreService {
+  static generateVirtualTicketNumber(scheduleId: string): number {
+    let hash = 0;
+    for (let i = 0; i < scheduleId.length; i++) {
+      const char = scheduleId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return 9000 + Math.abs(hash % 1000);
+  }
+
   static async getNextMaintenanceTicketNumber(): Promise<number> {
     try {
       const counterRef = doc(db, 'counters', 'maintenanceTicket');
