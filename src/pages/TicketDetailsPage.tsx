@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Ticket as TicketIcon, User, Clock, DollarSign, MessageSquare, Edit } from 'lucide-react';
+import { ArrowLeft, Ticket as TicketIcon, User, Clock, DollarSign, MessageSquare, CreditCard as Edit } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firestore';
 import Breadcrumb from '../components/ui/Breadcrumb';
