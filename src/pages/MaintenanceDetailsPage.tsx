@@ -476,6 +476,21 @@ const MaintenanceDetailsPage: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {ticket.originatingTicketId && (
+                <div className="flex items-start space-x-2">
+                  <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
+                  <div>
+                    <span className="font-medium text-gray-900">Originating Ticket</span>
+                    <Link
+                      to={`/tickets/${ticket.originatingTicketId}`}
+                      className="block text-primary-600 hover:text-primary-700"
+                    >
+                      View Ticket
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

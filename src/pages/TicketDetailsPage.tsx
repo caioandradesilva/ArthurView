@@ -197,6 +197,18 @@ const TicketDetailsPage: React.FC = () => {
                   </Link>
                 </div>
               )}
+
+              {ticket.maintenanceTicketId && (
+                <div>
+                  <span className="font-medium text-gray-900">Maintenance Request</span>
+                  <Link
+                    to={`/maintenance/${ticket.maintenanceTicketId}`}
+                    className="block text-primary-600 hover:text-primary-700 truncate"
+                  >
+                    View Maintenance
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
           

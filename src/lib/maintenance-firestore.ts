@@ -15,6 +15,7 @@ import {
   increment
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { FirestoreService } from './firestore';
 import type {
   MaintenanceTicket,
   MaintenanceAttachment,
@@ -325,6 +326,9 @@ export class MaintenanceFirestoreService {
     verifiedBy: string,
     verificationNotes: string
   ): Promise<void> {
+    const maintenanceDoc = await getDoc(doc(db, 'maintenanceTickets', id));
+    const maintenanceData = maintenanceDoc.data();
+
     await updateDoc(doc(db, 'maintenanceTickets', id), {
       status: 'verified',
       verifiedBy,
@@ -341,6 +345,14 @@ export class MaintenanceFirestoreService {
       performedByRole: 'admin',
       metadata: { action: 'verify', verificationNotes }
     });
+
+    // If this maintenance was created from a ticket, auto-close that ticket
+    if (maintenanceData?.originatingTicketId) {
+      await FirestoreService.updateTicket(maintenanceData.originatingTicketId, {
+        status: 'closed',
+        resolvedAt: new Date()
+      });
+    }
   }
 
   static async createMaintenanceAttachment(attachment: Omit<MaintenanceAttachment, 'id'>): Promise<string> {

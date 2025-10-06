@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, MapPin, Package, Server, Cpu } from 'lucide-react';
 import { FirestoreService } from '../../lib/firestore';
+import { MaintenanceFirestoreService } from '../../lib/maintenance-firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import type { ASIC, Site, Container, Rack, User } from '../../types';
 
@@ -21,6 +22,7 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    type: 'general' as 'general' | 'maintenance',
     priority: 'medium' as 'low' | 'medium' | 'high',
     asicId: preselectedAsicId || '',
     assetType: 'none' as 'none' | 'site' | 'container' | 'rack' | 'asic',
@@ -214,9 +216,10 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         }
       }
 
-      await FirestoreService.createTicket({
+      const ticketId = await FirestoreService.createTicket({
         title: formData.title,
         description: formData.description,
+        type: formData.type,
         priority: formData.priority,
         status: 'open',
         asicId: formData.assetType === 'asic' ? formData.selectedAssetId : undefined,
@@ -231,11 +234,44 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         createdAt: new Date(),
         updatedAt: new Date()
       });
-      
+
+      // If ticket type is maintenance, auto-create maintenance ticket
+      if (formData.type === 'maintenance') {
+        const maintenanceTicketId = await MaintenanceFirestoreService.createMaintenanceTicket({
+          title: `Maintenance Required: ${formData.title}`,
+          description: formData.description,
+          maintenanceType: 'corrective',
+          priority: formData.priority === 'low' ? 'low' : formData.priority === 'medium' ? 'medium' : 'high',
+          status: 'pending_approval',
+          assetType: formData.assetType === 'none' ? 'asic' : formData.assetType,
+          assetId: formData.selectedAssetId,
+          siteId: siteId,
+          createdBy: userProfile.name,
+          createdByRole: userProfile.role,
+          assignedTo: formData.assignedTo ? [formData.assignedTo] : [],
+          partsUsed: [],
+          estimatedCost: 0,
+          actualCost: 0,
+          costCurrency: 'USD',
+          isUrgent: false,
+          isRecurring: false,
+          clientVisible: userProfile.role !== 'client',
+          originatingTicketId: ticketId,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+
+        // Link maintenance ticket back to the ticket
+        await FirestoreService.updateTicket(ticketId, {
+          maintenanceTicketId: maintenanceTicketId
+        });
+      }
+
       onSuccess();
       setFormData({
         title: '',
         description: '',
+        type: 'general',
         priority: 'medium',
         asicId: preselectedAsicId || '',
         assetType: 'none',
@@ -449,6 +485,29 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               placeholder="Detailed description of the issue, affected equipment (ASIC, rack, container, site), symptoms, and any troubleshooting already performed..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
+                Ticket Type *
+              </label>
+              <select
+                id="type"
+                required
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="general">General Issue</option>
+                <option value="maintenance">Maintenance Required</option>
+              </select>
+              {formData.type === 'maintenance' && (
+                <p className="mt-1 text-xs text-gray-500">
+                  A maintenance request will be automatically created when you submit this ticket
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

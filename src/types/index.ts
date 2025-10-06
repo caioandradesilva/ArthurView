@@ -60,6 +60,7 @@ export interface Ticket {
   siteId: string; // For site-based access control
   title: string;
   description: string;
+  type?: 'general' | 'maintenance'; // Type of ticket
   priority: 'low' | 'medium' | 'high';
   status: 'open' | 'in_progress' | 'waiting_parts' | 'resolved' | 'closed';
   assignedTo: string[]; // Multiple operators can be assigned
@@ -73,6 +74,7 @@ export interface Ticket {
   costCurrency: 'USD' | 'BRL';
   isUrgent: boolean; // Admin can mark as urgent
   clientVisible: boolean; // Admin control for client visibility
+  maintenanceTicketId?: string; // Link to auto-generated maintenance ticket
 }
 
 export interface Comment {
@@ -202,6 +204,7 @@ export interface MaintenanceTicket {
   isRecurring: boolean;
   recurringScheduleId?: string;
   clientVisible: boolean;
+  originatingTicketId?: string; // Link to originating ticket that triggered this maintenance
   createdAt: Date | any;
   updatedAt: Date | any;
   closedAt?: Date;
