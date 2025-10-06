@@ -28,11 +28,86 @@ const MaintenanceCalendarPage: React.FC = () => {
     }
   }, [userProfile]);
 
+  const generateRecurringOccurrences = (schedule: any): MaintenanceTicket[] => {
+    const occurrences: MaintenanceTicket[] = [];
+    const startDate = schedule.nextScheduledDate instanceof Date
+      ? schedule.nextScheduledDate
+      : schedule.nextScheduledDate.toDate();
+    const endDate = schedule.endDate
+      ? (schedule.endDate instanceof Date ? schedule.endDate : schedule.endDate.toDate())
+      : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+    let currentDate = new Date(startDate);
+    let occurrenceCount = 0;
+    const maxOccurrences = 50;
+
+    while (currentDate <= endDate && occurrenceCount < maxOccurrences) {
+      occurrences.push({
+        id: `recurring-${schedule.id}-${currentDate.getTime()}`,
+        ticketNumber: 0,
+        title: schedule.ticketTemplate.title,
+        description: schedule.ticketTemplate.description,
+        maintenanceType: schedule.maintenanceType,
+        priority: schedule.ticketTemplate.priority,
+        status: 'scheduled',
+        assetType: schedule.assetType,
+        assetId: schedule.assetId,
+        siteId: schedule.siteId,
+        scheduledDate: new Date(currentDate),
+        estimatedDuration: schedule.ticketTemplate.estimatedDuration,
+        createdBy: schedule.createdBy,
+        createdByRole: 'admin' as any,
+        assignedTo: schedule.ticketTemplate.assignedTo,
+        partsUsed: [],
+        estimatedCost: 0,
+        actualCost: 0,
+        costCurrency: 'USD',
+        isUrgent: false,
+        isRecurring: true,
+        recurringScheduleId: schedule.id,
+        clientVisible: true,
+        createdAt: schedule.createdAt,
+        updatedAt: schedule.updatedAt
+      });
+
+      switch (schedule.frequency) {
+        case 'daily':
+          currentDate.setDate(currentDate.getDate() + schedule.frequencyValue);
+          break;
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + (7 * schedule.frequencyValue));
+          break;
+        case 'monthly':
+          currentDate.setMonth(currentDate.getMonth() + schedule.frequencyValue);
+          break;
+        case 'quarterly':
+          currentDate.setMonth(currentDate.getMonth() + (3 * schedule.frequencyValue));
+          break;
+        case 'yearly':
+          currentDate.setFullYear(currentDate.getFullYear() + schedule.frequencyValue);
+          break;
+      }
+
+      occurrenceCount++;
+    }
+
+    return occurrences;
+  };
+
   const loadMaintenanceTickets = async () => {
     setLoading(true);
     try {
       const tickets = await MaintenanceFirestoreService.getAllMaintenanceTickets();
-      setMaintenanceTickets(tickets);
+      const schedules = await MaintenanceFirestoreService.getActiveMaintenanceSchedules();
+
+      const expandedTickets = [...tickets];
+
+      for (const schedule of schedules) {
+        const occurrences = generateRecurringOccurrences(schedule);
+        expandedTickets.push(...occurrences);
+      }
+
+      setMaintenanceTickets(expandedTickets);
 
       const assetIds = [...new Set(tickets.map(t => t.assetId).filter(Boolean))];
       const assetsData: { [key: string]: ASIC | Site | Container | Rack } = {};
