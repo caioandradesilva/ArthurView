@@ -173,31 +173,6 @@ const CreateMaintenanceModal: React.FC<CreateMaintenanceModalProps> = ({ isOpen,
         }
       }
 
-      await MaintenanceFirestoreService.createMaintenanceTicket({
-        title: formData.title,
-        description: formData.description,
-        maintenanceType: formData.maintenanceType,
-        priority: formData.priority,
-        status: 'pending_approval',
-        assetType: formData.assetType,
-        assetId: formData.assetId,
-        siteId: siteId,
-        scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : undefined,
-        estimatedDuration: formData.estimatedDuration || undefined,
-        createdBy: userProfile.name,
-        createdByRole: userProfile.role,
-        assignedTo: formData.assignedTo,
-        partsUsed: [],
-        estimatedCost: 0,
-        actualCost: 0,
-        costCurrency: 'USD',
-        isUrgent: formData.isUrgent,
-        isRecurring: false,
-        clientVisible: userProfile.role !== 'client',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
       if (formData.isRecurring && formData.scheduledDate) {
         await MaintenanceFirestoreService.createMaintenanceSchedule({
           name: formData.title,
@@ -220,6 +195,31 @@ const CreateMaintenanceModal: React.FC<CreateMaintenanceModalProps> = ({ isOpen,
           },
           isActive: true,
           createdBy: userProfile.name,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      } else {
+        await MaintenanceFirestoreService.createMaintenanceTicket({
+          title: formData.title,
+          description: formData.description,
+          maintenanceType: formData.maintenanceType,
+          priority: formData.priority,
+          status: 'pending_approval',
+          assetType: formData.assetType,
+          assetId: formData.assetId,
+          siteId: siteId,
+          scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : undefined,
+          estimatedDuration: formData.estimatedDuration || undefined,
+          createdBy: userProfile.name,
+          createdByRole: userProfile.role,
+          assignedTo: formData.assignedTo,
+          partsUsed: [],
+          estimatedCost: 0,
+          actualCost: 0,
+          costCurrency: 'USD',
+          isUrgent: formData.isUrgent,
+          isRecurring: false,
+          clientVisible: userProfile.role !== 'client',
           createdAt: new Date(),
           updatedAt: new Date()
         });
