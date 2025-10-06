@@ -348,10 +348,14 @@ export class MaintenanceFirestoreService {
 
     // If this maintenance was created from a ticket, auto-close that ticket
     if (maintenanceData?.originatingTicketId) {
-      await FirestoreService.updateTicket(maintenanceData.originatingTicketId, {
-        status: 'closed',
-        resolvedAt: new Date()
-      });
+      await FirestoreService.updateTicket(
+        maintenanceData.originatingTicketId,
+        {
+          status: 'closed',
+          resolvedAt: new Date()
+        },
+        verifiedBy
+      );
     }
   }
 

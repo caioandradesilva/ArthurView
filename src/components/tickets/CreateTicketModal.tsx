@@ -262,9 +262,13 @@ const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         });
 
         // Link maintenance ticket back to the ticket
-        await FirestoreService.updateTicket(ticketId, {
-          maintenanceTicketId: maintenanceTicketId
-        });
+        await FirestoreService.updateTicket(
+          ticketId,
+          {
+            maintenanceTicketId: maintenanceTicketId
+          },
+          userProfile.name
+        );
       }
 
       onSuccess();

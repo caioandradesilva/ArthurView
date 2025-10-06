@@ -260,15 +260,17 @@ export class FirestoreService {
       ...cleanUpdates,
       updatedAt: serverTimestamp()
     });
-    
-    // Create audit event
-    await this.createAuditEvent({
-      asicId: currentTicket.asicId,
-      eventType: 'ticket_updated',
-      description: `Ticket updated: ${currentTicket.title}`,
-      performedBy,
-      metadata: { ticketId: id, updates }
-    });
+
+    // Create audit event only if asicId exists
+    if (currentTicket.asicId) {
+      await this.createAuditEvent({
+        asicId: currentTicket.asicId,
+        eventType: 'ticket_updated',
+        description: `Ticket updated: ${currentTicket.title}`,
+        performedBy,
+        metadata: { ticketId: id, updates }
+      });
+    }
   }
 
   // Comments
@@ -375,10 +377,20 @@ export class FirestoreService {
   }
 
   static async createAuditEvent(event: Omit<AuditEvent, 'id'>): Promise<string> {
-    const docRef = await addDoc(collection(db, 'auditEvents'), {
+    // Remove undefined fields to avoid Firestore errors
+    const eventData: any = {
       ...event,
       createdAt: serverTimestamp()
+    };
+
+    // Clean up undefined fields
+    Object.keys(eventData).forEach(key => {
+      if (eventData[key] === undefined) {
+        delete eventData[key];
+      }
     });
+
+    const docRef = await addDoc(collection(db, 'auditEvents'), eventData);
     return docRef.id;
   }
 
