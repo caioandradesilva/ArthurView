@@ -592,6 +592,12 @@ export class MaintenanceFirestoreService {
   }> {
     try {
       const querySnapshot = await getDocs(collection(db, 'maintenanceTickets'));
+      const schedulesSnapshot = await getDocs(
+        query(
+          collection(db, 'maintenanceSchedules'),
+          where('isActive', '==', true)
+        )
+      );
 
       let scheduled = 0;
       let inProgress = 0;
@@ -632,8 +638,16 @@ export class MaintenanceFirestoreService {
         }
       });
 
+      schedulesSnapshot.docs.forEach(doc => {
+        const schedule = doc.data();
+        scheduled++;
+        if (schedule.maintenanceType && byType.hasOwnProperty(schedule.maintenanceType)) {
+          byType[schedule.maintenanceType]++;
+        }
+      });
+
       return {
-        totalMaintenance: querySnapshot.size,
+        totalMaintenance: querySnapshot.size + schedulesSnapshot.size,
         scheduled,
         inProgress,
         completed,

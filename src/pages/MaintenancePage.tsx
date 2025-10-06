@@ -46,14 +46,51 @@ const MaintenancePage: React.FC = () => {
     setLoading(true);
     try {
       const tickets = await MaintenanceFirestoreService.getAllMaintenanceTickets();
+      const schedules = await MaintenanceFirestoreService.getActiveMaintenanceSchedules();
       console.log('MaintenancePage loaded tickets:', tickets);
-      setMaintenanceTickets(tickets);
+      console.log('MaintenancePage loaded schedules:', schedules);
 
-      const assetIds = [...new Set(tickets.map(t => t.assetId).filter(Boolean))];
+      const allTickets = [...tickets];
+
+      for (const schedule of schedules) {
+        const nextOccurrence: MaintenanceTicket = {
+          id: `recurring-${schedule.id}-${schedule.nextScheduledDate.getTime()}`,
+          ticketNumber: 9000 + parseInt(schedule.id.slice(-3), 16) % 1000,
+          title: schedule.ticketTemplate.title,
+          description: schedule.ticketTemplate.description,
+          maintenanceType: schedule.maintenanceType,
+          priority: schedule.ticketTemplate.priority,
+          status: 'scheduled',
+          assetType: schedule.assetType,
+          assetId: schedule.assetId,
+          siteId: schedule.siteId,
+          scheduledDate: schedule.nextScheduledDate,
+          estimatedDuration: schedule.ticketTemplate.estimatedDuration,
+          createdBy: schedule.createdBy,
+          createdByRole: 'admin' as any,
+          assignedTo: schedule.ticketTemplate.assignedTo,
+          partsUsed: [],
+          estimatedCost: 0,
+          actualCost: 0,
+          costCurrency: 'USD',
+          isUrgent: false,
+          isRecurring: true,
+          recurringScheduleId: schedule.id,
+          clientVisible: true,
+          createdAt: schedule.createdAt,
+          updatedAt: schedule.updatedAt
+        };
+        allTickets.push(nextOccurrence);
+      }
+
+      console.log('MaintenancePage total tickets (including recurring):', allTickets.length);
+      setMaintenanceTickets(allTickets);
+
+      const assetIds = [...new Set(allTickets.map(t => t.assetId).filter(Boolean))];
       const assetsData: { [key: string]: ASIC | Site | Container | Rack } = {};
 
       for (const assetId of assetIds) {
-        const ticket = tickets.find(t => t.assetId === assetId);
+        const ticket = allTickets.find(t => t.assetId === assetId);
         if (!ticket) continue;
 
         try {
